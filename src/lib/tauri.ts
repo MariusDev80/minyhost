@@ -12,6 +12,7 @@ import type {
   Instance,
   Loader,
   NewServer,
+  Operator,
   ServerCrashedEvent,
   ServerInfo,
   ServerStatusEvent,
@@ -46,6 +47,11 @@ export const commands = {
     invoke<WhitelistEntry>("add_to_whitelist", { id, name }),
   removeFromWhitelist: (id: string, uuid: string) =>
     invoke<void>("remove_from_whitelist", { id, uuid }),
+  listOperators: (id: string) => invoke<Operator[]>("list_operators", { id }),
+  addOperator: (id: string, name: string) =>
+    invoke<Operator>("add_operator", { id, name }),
+  removeOperator: (id: string, uuid: string) =>
+    invoke<void>("remove_operator", { id, uuid }),
   /** Skin PNG as a data URL (Steve when the player has no custom skin). */
   playerSkin: (uuid: string) => invoke<string>("player_skin", { uuid }),
 };

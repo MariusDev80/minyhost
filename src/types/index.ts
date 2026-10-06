@@ -69,11 +69,21 @@ export interface ServerCrashedEvent {
   exitCode: number | null;
 }
 
-/** One player of `whitelist.json`. Rust: `core/whitelist.rs` (`WhitelistEntry`). */
-export interface WhitelistEntry {
+/** A Minecraft account, as stored in the server's player lists. */
+export interface Player {
   /** With dashes. */
   uuid: string;
   name: string;
+}
+
+/** One player of `whitelist.json`. Rust: `core/whitelist.rs` (`WhitelistEntry`). */
+export type WhitelistEntry = Player;
+
+/** One player of `ops.json`. Rust: `core/operators.rs` (`Operator`). */
+export interface Operator extends Player {
+  /** Permission level, 4 = every command. */
+  level: number;
+  bypassesPlayerLimit: boolean;
 }
 
 /** Error returned by every command. Rust: `error.rs` (`AppError::code`). */

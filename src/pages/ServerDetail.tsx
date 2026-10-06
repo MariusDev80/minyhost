@@ -1,8 +1,9 @@
-import { ArrowLeft, ServerOff, Terminal, Users } from "lucide-react";
+import { ArrowLeft, Crown, ServerOff, Terminal, Users } from "lucide-react";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Console } from "@/components/server/Console";
 import { DeleteServerDialog } from "@/components/server/DeleteServerDialog";
+import { OperatorsPanel } from "@/components/server/OperatorsPanel";
 import { loaderInfo } from "@/components/server/loaders";
 import { ServerControls } from "@/components/server/ServerControls";
 import { StatusBadge } from "@/components/server/StatusBadge";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useOperators } from "@/hooks/useOperators";
 import { useServer } from "@/hooks/useServers";
 import { useWhitelist } from "@/hooks/useWhitelist";
 import { t } from "@/i18n";
@@ -46,6 +48,7 @@ export function ServerDetailPage({ id }: { id: string }) {
 function ServerDetail({ server }: { server: ServerInfo }) {
   const loader = loaderInfo(server.loader);
   const whitelist = useWhitelist(server.id);
+  const operators = useOperators(server.id);
   // Minecraft's default port can be omitted from the address.
   const address =
     server.port === 25565 ? "localhost" : `localhost:${server.port}`;
@@ -83,11 +86,12 @@ function ServerDetail({ server }: { server: ServerInfo }) {
           <TabsTrigger value="whitelist">
             <Users />
             {t.whitelist.tab}
-            {whitelist.data && (
-              <span className="text-xs text-muted-foreground">
-                {whitelist.data.length}
-              </span>
-            )}
+            <TabCount count={whitelist.data?.length} />
+          </TabsTrigger>
+          <TabsTrigger value="operators">
+            <Crown />
+            {t.operators.tab}
+            <TabCount count={operators.data?.length} />
           </TabsTrigger>
         </TabsList>
         <TabsContent value="console" className="pt-2">
@@ -96,9 +100,18 @@ function ServerDetail({ server }: { server: ServerInfo }) {
         <TabsContent value="whitelist" className="pt-2">
           <WhitelistPanel serverId={server.id} />
         </TabsContent>
+        <TabsContent value="operators" className="pt-2">
+          <OperatorsPanel serverId={server.id} />
+        </TabsContent>
       </Tabs>
     </>
   );
+}
+
+/** Number of players shown next to a tab name. */
+function TabCount({ count }: { count?: number }) {
+  if (count === undefined) return null;
+  return <span className="text-xs text-muted-foreground">{count}</span>;
 }
 
 function InfoTile({

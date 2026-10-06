@@ -1,9 +1,8 @@
-// Whitelist of a server, and player skins (TanStack Query).
+// Whitelist of a server (TanStack Query).
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { t } from "@/i18n";
 import { showError } from "@/lib/errors";
-import { loadSkin } from "@/lib/skin";
 import { commands } from "@/lib/tauri";
 import type { WhitelistEntry } from "@/types";
 
@@ -44,15 +43,5 @@ export function useRemoveFromWhitelist(serverId: string) {
       });
     },
     onError: showError,
-  });
-}
-
-/** Player skin, ready to draw. Skins rarely change: fetched once per app session. */
-export function usePlayerSkin(uuid: string) {
-  return useQuery({
-    queryKey: ["skin", uuid],
-    queryFn: async () => loadSkin(await commands.playerSkin(uuid)),
-    staleTime: Infinity,
-    retry: 1,
   });
 }

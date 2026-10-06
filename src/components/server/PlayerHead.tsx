@@ -1,6 +1,6 @@
 import { User } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePlayerSkin } from "@/hooks/useWhitelist";
+import { usePlayerSkin } from "@/hooks/usePlayerSkin";
 import { cn } from "@/lib/utils";
 
 /**

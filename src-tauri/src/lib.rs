@@ -43,6 +43,9 @@ pub fn run() {
             commands::whitelist::add_to_whitelist,
             commands::whitelist::remove_from_whitelist,
             commands::whitelist::player_skin,
+            commands::operators::list_operators,
+            commands::operators::add_operator,
+            commands::operators::remove_operator,
         ])
         .on_window_event(on_window_event)
         .run(tauri::generate_context!());

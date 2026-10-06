@@ -108,19 +108,33 @@ export const fr = {
     deleteConfirm: "Supprimer définitivement",
     deleted: (name: string) => `« ${name} » a été supprimé.`,
   },
+  // Shared by the whitelist and operators tabs.
+  players: {
+    placeholder: "Pseudo Minecraft",
+    add: "Ajouter",
+    remove: (name: string) => `Retirer ${name}`,
+    invalidName: "3 à 16 caractères : lettres, chiffres ou _",
+  },
   whitelist: {
     tab: "Whitelist",
     title: "Joueurs autorisés",
     description:
       "Seuls ces joueurs peuvent rejoindre le serveur. Utilise leur pseudo Minecraft exact.",
-    placeholder: "Pseudo Minecraft",
-    add: "Ajouter",
-    remove: (name: string) => `Retirer ${name}`,
-    invalidName: "3 à 16 caractères : lettres, chiffres ou _",
     empty: "Personne n'est encore autorisé. Commence par t'ajouter !",
     added: (name: string) => `${name} peut maintenant rejoindre le serveur.`,
     removed: (name: string) => `${name} a été retiré de la whitelist.`,
     already: (name: string) => `${name} est déjà dans la whitelist.`,
+  },
+  operators: {
+    tab: "Opérateurs",
+    title: "Opérateurs",
+    description:
+      "Les opérateurs peuvent utiliser toutes les commandes (/gamemode, /tp, /ban…) et rejoindre même sans être dans la whitelist. N'ajoute que des personnes de confiance.",
+    empty:
+      "Aucun opérateur. Ajoute-toi pour pouvoir utiliser les commandes en jeu.",
+    added: (name: string) => `${name} est maintenant opérateur.`,
+    removed: (name: string) => `${name} n'est plus opérateur.`,
+    already: (name: string) => `${name} est déjà opérateur.`,
   },
   notifications: {
     killed:

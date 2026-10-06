@@ -95,6 +95,7 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
         │   ├── properties.rs     # Lecture / écriture server.properties
         │   ├── eula.rs           # eula.txt
         │   ├── whitelist.rs      # whitelist.json
+        │   ├── operators.rs      # ops.json (opérateurs)
         │   ├── players.rs        # Profils Mojang (pseudo -> UUID, skins)
         │   ├── e2e_tests.rs      # Tests bout en bout (--ignored)
         │   └── backup.rs

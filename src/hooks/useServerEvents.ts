@@ -8,6 +8,7 @@ import { events } from "@/lib/tauri";
 import { useConsoleStore } from "@/stores/console";
 import { useUiStore } from "@/stores/ui";
 import type { ServerInfo } from "@/types";
+import { operatorsKey } from "./useOperators";
 import { serversKey } from "./useServers";
 import { whitelistKey } from "./useWhitelist";
 
@@ -38,6 +39,9 @@ export function useServerEvents() {
         // e.g. "Added Steve to the whitelist", typed in the console.
         if (/whitelist/i.test(line))
           void queryClient.invalidateQueries({ queryKey: whitelistKey(id) });
+        // e.g. "Made Steve a server operator" (after `op` / `deop`).
+        if (/server operator/i.test(line))
+          void queryClient.invalidateQueries({ queryKey: operatorsKey(id) });
       }),
     [appendLine, queryClient],
   );
