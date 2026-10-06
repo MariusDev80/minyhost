@@ -1,6 +1,23 @@
 // Typed wrappers around Tauri `invoke` / `listen`.
 // The frontend never touches the disk or network directly: everything goes through here.
+//
+// Rust side: commands in `src-tauri/src/commands/`, events in `src-tauri/src/events.rs`.
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import type {
+  ConsoleLineEvent,
+  CreateProgress,
+  Instance,
+  Loader,
+  NewServer,
+  ServerCrashedEvent,
+  ServerInfo,
+  ServerStatusEvent,
+  StopOutcome,
+  WhitelistEntry,
+} from "@/types";
 
 /** Controls for the frameless main window (custom title bar). */
 export const appWindow = {
@@ -9,4 +26,63 @@ export const appWindow = {
   close: () => getCurrentWindow().close(),
   isMaximized: () => getCurrentWindow().isMaximized(),
   onResized: (handler: () => void) => getCurrentWindow().onResized(handler),
+};
+
+/** Rust commands. On failure they reject with an `AppError` (see `lib/errors.ts`). */
+export const commands = {
+  listServers: () => invoke<ServerInfo[]>("list_servers"),
+  listVersions: (loader: Loader) =>
+    invoke<string[]>("list_versions", { loader }),
+  createServer: (input: NewServer) =>
+    invoke<Instance>("create_server", { input }),
+  deleteServer: (id: string) => invoke<void>("delete_server", { id }),
+  startServer: (id: string) => invoke<void>("start_server", { id }),
+  stopServer: (id: string) => invoke<StopOutcome>("stop_server", { id }),
+  sendCommand: (id: string, command: string) =>
+    invoke<void>("send_command", { id, command }),
+  listWhitelist: (id: string) =>
+    invoke<WhitelistEntry[]>("list_whitelist", { id }),
+  addToWhitelist: (id: string, name: string) =>
+    invoke<WhitelistEntry>("add_to_whitelist", { id, name }),
+  removeFromWhitelist: (id: string, uuid: string) =>
+    invoke<void>("remove_from_whitelist", { id, uuid }),
+  /** Skin PNG as a data URL (Steve when the player has no custom skin). */
+  playerSkin: (uuid: string) => invoke<string>("player_skin", { uuid }),
+};
+
+/** Opens a web page in the user's browser. */
+export const openExternal = (url: string) => openUrl(url).catch(() => {});
+
+/**
+ * Subscribes to a Rust event and returns the function that unsubscribes,
+ * ready to be returned from a `useEffect`. Handles the case where the
+ * component unmounts before `listen` has resolved.
+ */
+function subscribe<T>(event: string, handler: (payload: T) => void) {
+  let disposed = false;
+  let unlisten: (() => void) | undefined;
+  listen<T>(event, (e) => handler(e.payload)).then(
+    (fn) => {
+      if (disposed) fn();
+      else unlisten = fn;
+    },
+    () => {},
+  );
+  return () => {
+    disposed = true;
+    unlisten?.();
+  };
+}
+
+/** Rust events. Usage: `useEffect(() => events.onConsoleLine((e) => ...), [])`. */
+export const events = {
+  onConsoleLine: (handler: (e: ConsoleLineEvent) => void) =>
+    subscribe("console-line", handler),
+  onServerStatus: (handler: (e: ServerStatusEvent) => void) =>
+    subscribe("server-status", handler),
+  onServerCrashed: (handler: (e: ServerCrashedEvent) => void) =>
+    subscribe("server-crashed", handler),
+  onCreateProgress: (handler: (e: CreateProgress) => void) =>
+    subscribe("create-progress", handler),
+  onAppClosing: (handler: () => void) => subscribe("app-closing", handler),
 };

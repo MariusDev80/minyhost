@@ -2,9 +2,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useServerEvents } from "@/hooks/useServerEvents";
 import { useApplyTheme } from "@/hooks/useTheme";
+import { CreateServerPage } from "@/pages/CreateServer";
 import { DesignSystemPage } from "@/pages/DesignSystem";
 import { HomePage } from "@/pages/Home";
+import { ServerDetailPage } from "@/pages/ServerDetail";
 import { ServersPage } from "@/pages/Servers";
 import { SettingsPage } from "@/pages/Settings";
 import { useUiStore, type Route } from "@/stores/ui";
@@ -17,11 +20,22 @@ function CurrentPage({ route }: { route: Route }) {
       return <HomePage />;
     case "servers":
       return <ServersPage />;
+    case "create-server":
+      return <CreateServerPage />;
+    case "server":
+      // `key` resets the page state when switching from one server to another.
+      return <ServerDetailPage key={route.id} id={route.id} />;
     case "settings":
       return <SettingsPage />;
     case "design-system":
       return <DesignSystemPage />;
   }
+}
+
+/** Global listeners; needs to live inside `QueryClientProvider`. */
+function EventListeners() {
+  useServerEvents();
+  return null;
 }
 
 function App() {
@@ -30,6 +44,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <EventListeners />
       <TooltipProvider>
         <AppLayout>
           <CurrentPage route={route} />

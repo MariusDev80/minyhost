@@ -1,4 +1,5 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ClosingOverlay } from "./ClosingOverlay";
 import { Sidebar } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 
@@ -13,6 +14,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <main className="mx-auto w-full max-w-5xl p-8">{children}</main>
         </ScrollArea>
       </div>
+      <ClosingOverlay />
     </div>
   );
 }

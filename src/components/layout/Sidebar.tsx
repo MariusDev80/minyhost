@@ -3,8 +3,11 @@ import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
 import { useUiStore, type Route } from "@/stores/ui";
 
+/** Routes reachable from the sidebar: those without parameters. */
+type SectionRoute = Exclude<Route, { id: string }>["name"];
+
 interface NavItem {
-  route: Route["name"];
+  route: SectionRoute;
   label: string;
   icon: LucideIcon;
 }
@@ -45,8 +48,15 @@ export function Sidebar() {
   );
 }
 
+/** Sidebar entry to highlight: sub-pages belong to their parent section. */
+function sectionOf(route: Route): SectionRoute {
+  if (route.name === "server" || route.name === "create-server")
+    return "servers";
+  return route.name;
+}
+
 function SidebarLink({ item }: { item: NavItem }) {
-  const active = useUiStore((state) => state.route.name === item.route);
+  const active = useUiStore((state) => sectionOf(state.route) === item.route);
   const navigate = useUiStore((state) => state.navigate);
   const Icon = item.icon;
 

@@ -73,7 +73,10 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
 │   ├── stores/                   # Stores Zustand
 │   ├── lib/
 │   │   ├── tauri.ts              # Wrappers typés autour de invoke/listen
+│   │   ├── errors.ts             # Erreur Rust -> message lisible (i18n)
+│   │   ├── skin.ts               # Lecture d'un skin (tête du joueur)
 │   │   └── utils.ts
+│   ├── i18n/fr.ts                # Tous les textes de l'interface
 │   └── types/                    # Types partagés avec Rust
 └── src-tauri/                    # Backend Rust
     ├── Cargo.toml
@@ -85,11 +88,18 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
         ├── commands/             # Fonctions exposées au frontend (fines)
         ├── core/                 # Logique métier, indépendante de Tauri
         │   ├── instances.rs      # CRUD des serveurs
+        │   ├── create.rs         # Pipeline de création (5.1)
         │   ├── java.rs           # Détection / téléchargement des JRE
         │   ├── providers/        # vanilla.rs, paper.rs, fabric.rs
         │   ├── process.rs        # Lancement, arrêt, console
         │   ├── properties.rs     # Lecture / écriture server.properties
+        │   ├── eula.rs           # eula.txt
+        │   ├── whitelist.rs      # whitelist.json
+        │   ├── players.rs        # Profils Mojang (pseudo -> UUID, skins)
+        │   ├── e2e_tests.rs      # Tests bout en bout (--ignored)
         │   └── backup.rs
+        ├── events.rs             # Événements envoyés au frontend
+        ├── state.rs              # État partagé des commandes
         ├── download.rs           # Téléchargement + vérification de hash
         ├── paths.rs              # Chemins AppData
         └── error.rs              # Type d'erreur commun
@@ -152,11 +162,14 @@ Chaque serveur est **autonome dans son dossier** : on doit pouvoir le copier ail
 5. **L'EULA de Mojang** est présentée à l'utilisateur avec un lien. `eula.txt` n'est écrit à `true` qu'après son acceptation explicite.
 
 ### 5.2 Choix de Java
+La source de vérité est le champ `javaVersion.majorVersion` du fichier de version Mojang (`providers/vanilla.rs`, `required_java`), utilisé pour tous les types de serveur. Il est arrondi à la LTS Temurin supérieure (`java.rs`, `runtime_for`). À titre indicatif (vérifié en octobre 2026) :
+
 | Version Minecraft | Java requis |
 |---|---|
-| 1.20.5 et plus | 21 |
+| 26.1 et plus | 25 |
+| 1.20.5 à 1.21.x | 21 |
 | 1.18 à 1.20.4 | 17 |
-| 1.17.x | 16 (17 accepté) |
+| 1.17.x | 16 (17 installé) |
 | 1.16.5 et moins | 8 |
 
 Les JRE sont téléchargés depuis l'API Adoptium (Temurin) et stockés dans `java/<version>/`. On n'utilise jamais le Java installé sur le système.
@@ -204,6 +217,7 @@ Les JRE sont téléchargés depuis l'API Adoptium (Temurin) et stockés dans `ja
 | Paper | API PaperMC (`fill.papermc.io`, v3) |
 | Fabric | `https://meta.fabricmc.net/v2/` |
 | Java (Temurin) | `https://api.adoptium.net/v3/` |
+| Joueurs (UUID, skins) | `api.mojang.com`, `sessionserver.mojang.com`, `textures.minecraft.net` |
 | Mods / plugins (phase 4) | `https://api.modrinth.com/v2/` |
 
 Règles :
@@ -247,6 +261,7 @@ npm run tauri dev         # Lancer l'app en développement
 npm run tauri build       # Construire l'installeur
 npx shadcn@latest add <composant>
 cargo test --manifest-path src-tauri/Cargo.toml
+cargo test --manifest-path src-tauri/Cargo.toml -- --ignored   # Bout en bout (télécharge Java + serveurs)
 cargo clippy --manifest-path src-tauri/Cargo.toml
 npm run lint
 ```
