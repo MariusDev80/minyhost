@@ -18,11 +18,14 @@ pub struct ServerInfo {
     #[serde(flatten)]
     instance: Instance,
     status: ServerStatus,
+    /// Settings changed while running: a restart is needed to apply them.
+    needs_restart: bool,
 }
 
 #[tauri::command]
 pub async fn list_servers(state: State<'_, AppState>) -> AppResult<Vec<ServerInfo>> {
     let statuses = state.processes.statuses().await;
+    let restart_pending = state.processes.restart_pending().await;
     let servers = instances::list(&state.paths)?
         .into_iter()
         .map(|instance| {
@@ -30,7 +33,12 @@ pub async fn list_servers(state: State<'_, AppState>) -> AppResult<Vec<ServerInf
                 .get(&instance.id)
                 .copied()
                 .unwrap_or(ServerStatus::Stopped);
-            ServerInfo { instance, status }
+            let needs_restart = restart_pending.contains(&instance.id);
+            ServerInfo {
+                instance,
+                status,
+                needs_restart,
+            }
         })
         .collect();
     Ok(servers)

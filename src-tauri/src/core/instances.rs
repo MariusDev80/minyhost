@@ -3,11 +3,13 @@
 //! An instance is "a server folder that contains an `instance.json`". Folders
 //! without it (e.g. an interrupted creation) are ignored.
 
+use std::collections::BTreeMap;
 use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::game_settings::SettingValue;
 use crate::core::providers::Loader;
 use crate::error::{AppError, AppResult};
 use crate::paths::{server_files, AppPaths};
@@ -34,6 +36,15 @@ pub struct Instance {
     pub port: u16,
     /// ISO 8601, UTC (`2026-10-05T12:00:00Z`).
     pub created_at: String,
+    /// Game rules changed in MinyHost while the server was stopped (or at
+    /// creation): sent once the server has started, then cleared
+    /// (`core/game_rules.rs`). `gameRules` is the name used by early versions.
+    #[serde(
+        default,
+        alias = "gameRules",
+        skip_serializing_if = "BTreeMap::is_empty"
+    )]
+    pub pending_game_rules: BTreeMap<String, SettingValue>,
 }
 
 /// All instances, newest first.

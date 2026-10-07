@@ -4,8 +4,11 @@
 //! download Java, download the server jar, write the config files.
 //! If anything fails, the folder is removed so no broken server is left behind.
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
+use crate::core::game_settings::{self, GameSettings};
 use crate::core::providers::{self, vanilla, Loader};
 use crate::core::{eula, instances, java, properties};
 use crate::download::download_file;
@@ -24,6 +27,9 @@ pub struct NewServer {
     pub memory_mb: u32,
     /// Must be `true`: ticked by the user in the form.
     pub eula_accepted: bool,
+    /// Optional world settings and game rules chosen in the form.
+    #[serde(default)]
+    pub settings: GameSettings,
 }
 
 /// Progress sent to the UI during creation (`create-progress` event).
@@ -61,7 +67,7 @@ pub async fn create_server(
     let taken_ids: Vec<String> = existing.iter().map(|i| i.id.clone()).collect();
     let taken_ports: Vec<u16> = existing.iter().map(|i| i.port).collect();
 
-    let instance = instances::Instance {
+    let mut instance = instances::Instance {
         id: instances::unique_id(&input.name, &taken_ids),
         name: input.name.trim().to_string(),
         mc_version: input.mc_version.clone(),
@@ -71,6 +77,7 @@ pub async fn create_server(
         memory_mb: input.memory_mb,
         port: instances::free_port(&taken_ports),
         created_at: instances::now_iso8601(),
+        pending_game_rules: BTreeMap::new(),
     };
 
     let dir = paths.server_dir(&instance.id);
@@ -96,6 +103,9 @@ pub async fn create_server(
         report(CreateStep::Finalizing, None);
         properties::defaults(instance.port, &instance.name)
             .save(&dir.join(server_files::PROPERTIES))?;
+        // Game rules wait for the world to exist: sent at first start.
+        instance.pending_game_rules =
+            game_settings::apply(&dir, &instance.mc_version, &input.settings, true)?.game_rules;
         eula::accept(&dir)?;
         // Written last: the server only shows up in the list once complete.
         instances::save(paths, &instance)
@@ -137,6 +147,7 @@ mod tests {
             mc_version: "1.21.1".into(),
             memory_mb: 4096,
             eula_accepted: true,
+            settings: GameSettings::default(),
         }
     }
 

@@ -21,11 +21,13 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let handle = app.handle().clone();
-            let processes = ProcessManager::new(Arc::new(move |event| {
-                events::forward_server_event(&handle, event)
-            }));
+            let paths = AppPaths::from_env();
+            let processes = ProcessManager::new(
+                paths.clone(),
+                Arc::new(move |event| events::forward_server_event(&handle, event)),
+            );
             app.manage(AppState {
-                paths: AppPaths::from_env(),
+                paths,
                 http: download::http_client()?,
                 processes,
             });
@@ -38,6 +40,7 @@ pub fn run() {
             commands::servers::delete_server,
             commands::process::start_server,
             commands::process::stop_server,
+            commands::process::restart_server,
             commands::process::send_command,
             commands::whitelist::list_whitelist,
             commands::whitelist::add_to_whitelist,
@@ -46,6 +49,9 @@ pub fn run() {
             commands::operators::list_operators,
             commands::operators::add_operator,
             commands::operators::remove_operator,
+            commands::settings::game_settings_catalog,
+            commands::settings::get_game_settings,
+            commands::settings::save_game_settings,
         ])
         .on_window_event(on_window_event)
         .run(tauri::generate_context!());

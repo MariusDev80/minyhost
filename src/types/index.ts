@@ -25,6 +25,8 @@ export interface Instance {
 /** An instance plus its live status. Rust: `commands/servers.rs` (`ServerInfo`). */
 export interface ServerInfo extends Instance {
   status: ServerStatus;
+  /** Settings changed while running: a restart is needed to apply them. */
+  needsRestart: boolean;
 }
 
 /** Creation form. Rust: `core/create.rs` (`NewServer`). */
@@ -34,6 +36,48 @@ export interface NewServer {
   mcVersion: string;
   memoryMb: number;
   eulaAccepted: boolean;
+  /** Optional: only the settings that differ from their default. */
+  settings?: GameSettings;
+}
+
+/** Value of a game setting. Rust: `core/game_settings.rs` (`SettingValue`). */
+export type SettingValue = boolean | number | string;
+
+/** Rust: `core/game_rules.rs` (`Category`). */
+export type GameRuleCategory =
+  "players" | "mobs" | "world" | "drops" | "commands";
+
+/** A setting described by Rust. Rust: `core/game_settings.rs` (`SettingDef`). */
+export type SettingDef = {
+  key: string;
+  /** Game rules only. */
+  category: GameRuleCategory | null;
+  /** Only useful before the world exists (seed…). */
+  creationOnly: boolean;
+} & (
+  | { kind: "bool"; default: boolean }
+  | { kind: "int"; default: number; min: number; max: number | null }
+  | { kind: "choice"; default: string; choices: string[] }
+  | { kind: "text"; default: string; maxLength: number }
+);
+
+/** Settings available for a Minecraft version. Rust: `Catalog`. */
+export interface SettingsCatalog {
+  /** World settings (`server.properties`). */
+  properties: SettingDef[];
+  gameRules: SettingDef[];
+}
+
+/** Values of a server's settings, by key. Rust: `GameSettings`. */
+export interface GameSettings {
+  properties: Record<string, SettingValue>;
+  gameRules: Record<string, SettingValue>;
+}
+
+/** Result of saving settings. Rust: `core/game_settings.rs` (`SaveOutcome`). */
+export interface SaveOutcome {
+  /** World settings changed while running: restart to apply them. */
+  needsRestart: boolean;
 }
 
 /** Rust: `core/create.rs` (`CreateStep`). */

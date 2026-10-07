@@ -9,13 +9,16 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import type {
   ConsoleLineEvent,
   CreateProgress,
+  GameSettings,
   Instance,
   Loader,
   NewServer,
+  SaveOutcome,
   Operator,
   ServerCrashedEvent,
   ServerInfo,
   ServerStatusEvent,
+  SettingsCatalog,
   StopOutcome,
   WhitelistEntry,
 } from "@/types";
@@ -39,6 +42,7 @@ export const commands = {
   deleteServer: (id: string) => invoke<void>("delete_server", { id }),
   startServer: (id: string) => invoke<void>("start_server", { id }),
   stopServer: (id: string) => invoke<StopOutcome>("stop_server", { id }),
+  restartServer: (id: string) => invoke<StopOutcome>("restart_server", { id }),
   sendCommand: (id: string, command: string) =>
     invoke<void>("send_command", { id, command }),
   listWhitelist: (id: string) =>
@@ -52,6 +56,12 @@ export const commands = {
     invoke<Operator>("add_operator", { id, name }),
   removeOperator: (id: string, uuid: string) =>
     invoke<void>("remove_operator", { id, uuid }),
+  gameSettingsCatalog: (mcVersion: string) =>
+    invoke<SettingsCatalog>("game_settings_catalog", { mcVersion }),
+  getGameSettings: (id: string) =>
+    invoke<GameSettings>("get_game_settings", { id }),
+  saveGameSettings: (id: string, settings: GameSettings) =>
+    invoke<SaveOutcome>("save_game_settings", { id, settings }),
   /** Skin PNG as a data URL (Steve when the player has no custom skin). */
   playerSkin: (uuid: string) => invoke<string>("player_skin", { uuid }),
 };

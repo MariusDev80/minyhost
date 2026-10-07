@@ -59,6 +59,12 @@ impl Properties {
         })
     }
 
+    /// Like `get`, with Java escapes decoded (`é` -> `é`, `\:` -> `:`),
+    /// for values shown to the user.
+    pub fn get_text(&self, key: &str) -> Option<String> {
+        self.get(key).map(unescape)
+    }
+
     /// Updates `key`, or appends it if missing. Non-ASCII characters are
     /// escaped (`é`), which every Minecraft version reads correctly.
     pub fn set(&mut self, key: &str, value: &str) {
@@ -119,9 +125,45 @@ fn escape(value: &str) -> String {
         .collect()
 }
 
+/// Decodes the escapes Java writes in `.properties` files.
+fn unescape(raw: &str) -> String {
+    let mut units: Vec<u16> = Vec::new();
+    let mut chars = raw.chars();
+    while let Some(c) = chars.next() {
+        if c != '\\' {
+            units.extend(c.encode_utf16(&mut [0; 2]).iter());
+            continue;
+        }
+        match chars.next() {
+            Some('u') => {
+                let hex: String = chars.by_ref().take(4).collect();
+                units.push(u16::from_str_radix(&hex, 16).unwrap_or(u16::from(b'?')));
+            }
+            Some('t') => units.push(u16::from(b'\t')),
+            Some('n') => units.push(u16::from(b'\n')),
+            Some('r') => units.push(u16::from(b'\r')),
+            Some(other) => units.extend(other.encode_utf16(&mut [0; 2]).iter()),
+            None => {}
+        }
+    }
+    // UTF-16 so that escaped surrogate pairs (emoji) decode correctly.
+    String::from_utf16_lossy(&units)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn get_text_decodes_escapes() {
+        let mut properties = Properties::parse("level-type=minecraft\\:flat\n");
+        properties.set("motd", "Été 🎉");
+        assert_eq!(properties.get_text("motd").as_deref(), Some("Été 🎉"));
+        assert_eq!(
+            properties.get_text("level-type").as_deref(),
+            Some("minecraft:flat")
+        );
+    }
 
     #[test]
     fn parse_keeps_comments_and_order() {

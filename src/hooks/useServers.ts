@@ -59,6 +59,17 @@ export function useStopServer() {
   });
 }
 
+/** Stop then start, e.g. to apply new settings. */
+export function useRestartServer() {
+  return useMutation({
+    mutationFn: (id: string) => commands.restartServer(id),
+    onSuccess: (outcome) => {
+      if (outcome === "killed") toast.warning(t.notifications.killed);
+    },
+    onError: showError,
+  });
+}
+
 export function useSendCommand(id: string) {
   const append = useConsoleStore((state) => state.append);
   return useMutation({

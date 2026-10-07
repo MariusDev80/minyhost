@@ -32,6 +32,7 @@ export const fr = {
     retry: "Réessayer",
     edit: "Modifier",
     send: "Envoyer",
+    restart: "Redémarrer",
   },
   loaders: {
     vanilla: {
@@ -135,6 +136,358 @@ export const fr = {
     added: (name: string) => `${name} est maintenant opérateur.`,
     removed: (name: string) => `${name} n'est plus opérateur.`,
     already: (name: string) => `${name} est déjà opérateur.`,
+  },
+  restart: {
+    title: "Redémarrage nécessaire",
+    description:
+      "Des paramètres ont changé pendant que le serveur tournait. Redémarre-le pour les appliquer.",
+  },
+  gameSettings: {
+    tab: "Paramètres",
+    world: "Monde et serveur",
+    worldDescription:
+      "Enregistrés dans server.properties. Appliqués au prochain démarrage du serveur.",
+    rules: "Règles du jeu",
+    rulesDescription:
+      "Valeurs lues dans le monde, y compris celles changées en jeu. Serveur allumé : appliquées immédiatement. Serveur arrêté : appliquées à son prochain démarrage.",
+    unsupported:
+      "Les règles du jeu ne sont pas gérées pour les versions antérieures à 1.13.",
+    search: "Rechercher un réglage…",
+    noResult: "Aucun réglage ne correspond à ta recherche.",
+    reset: "Remettre la valeur par défaut",
+    defaultValue: (value: string) => `Par défaut : ${value}`,
+    on: "activé",
+    off: "désactivé",
+    unsaved: "Modifications non enregistrées",
+    discard: "Annuler",
+    save: "Enregistrer",
+    saved: "Paramètres enregistrés.",
+    savedNeedsRestart:
+      "Paramètres enregistrés. Redémarre le serveur pour appliquer les réglages du monde.",
+    loadError: "Impossible de lire les paramètres de ce serveur.",
+    creationToggle: "Personnaliser le monde et les règles du jeu",
+    creationHint: "Facultatif : tout reste modifiable plus tard.",
+    categories: {
+      players: "Joueurs",
+      mobs: "Créatures",
+      world: "Monde",
+      drops: "Objets et butin",
+      commands: "Commandes et technique",
+    },
+    choices: {
+      difficulty: {
+        peaceful: "Paisible",
+        easy: "Facile",
+        normal: "Normale",
+        hard: "Difficile",
+      },
+      gamemode: {
+        survival: "Survie",
+        creative: "Créatif",
+        adventure: "Aventure",
+        spectator: "Spectateur",
+      },
+    },
+    // One entry per setting key (see `core/game_settings.rs` and `core/game_rules.rs`).
+    // A setting without text here is shown with its technical name.
+    labels: {
+      // server.properties
+      motd: {
+        label: "Message du serveur",
+        description:
+          "Texte affiché sous le nom du serveur dans la liste multijoueur.",
+      },
+      difficulty: { label: "Difficulté" },
+      gamemode: {
+        label: "Mode de jeu",
+        description: "Mode de jeu des joueurs qui rejoignent le serveur.",
+      },
+      hardcore: {
+        label: "Hardcore",
+        description: "Une seule vie : à sa mort, le joueur devient spectateur.",
+      },
+      "max-players": { label: "Joueurs maximum" },
+      "view-distance": {
+        label: "Distance d'affichage (chunks)",
+        description:
+          "Nombre de chunks envoyés autour de chaque joueur. Plus c'est haut, plus le serveur travaille.",
+      },
+      "simulation-distance": {
+        label: "Distance de simulation (chunks)",
+        description:
+          "Rayon en chunks où le monde reste actif : créatures, cultures, redstone.",
+      },
+      "spawn-protection": {
+        label: "Protection du spawn (blocs)",
+        description:
+          "Rayon autour du point d'apparition où seuls les opérateurs peuvent construire. 0 pour désactiver.",
+      },
+      "allow-flight": {
+        label: "Autoriser le vol",
+        description:
+          "Évite que les joueurs soient expulsés pour vol (utile avec certains mods ou plugins).",
+      },
+      pvp: {
+        label: "Combats entre joueurs (PvP)",
+        description: "Les joueurs peuvent se blesser entre eux.",
+      },
+      "spawn-monsters": {
+        label: "Apparition des monstres",
+        description: "Les monstres hostiles apparaissent naturellement.",
+      },
+      "allow-nether": {
+        label: "Autoriser le Nether",
+        description: "Les portails permettent d'aller dans le Nether.",
+      },
+      "level-seed": {
+        label: "Graine du monde (seed)",
+        description: "Laisse vide pour une graine aléatoire.",
+      },
+      "generate-structures": {
+        label: "Générer les structures",
+        description: "Villages, temples, forteresses…",
+      },
+      // Game rules: players
+      keep_inventory: {
+        label: "Garder l'inventaire à la mort",
+        description:
+          "Les joueurs gardent leurs objets et leur expérience en mourant.",
+      },
+      natural_health_regeneration: {
+        label: "Régénération naturelle",
+        description:
+          "La santé remonte quand la barre de faim est bien remplie.",
+      },
+      immediate_respawn: {
+        label: "Réapparition immédiate",
+        description:
+          "Pas d'écran de mort : le joueur réapparaît tout de suite.",
+      },
+      players_sleeping_percentage: {
+        label: "Joueurs devant dormir (%)",
+        description:
+          "Pourcentage des joueurs qui doivent dormir pour passer la nuit. Au-delà de 100, impossible de la passer.",
+      },
+      respawn_radius: {
+        label: "Rayon d'apparition (blocs)",
+        description:
+          "Zone autour du point d'apparition où les joueurs apparaissent.",
+      },
+      fall_damage: { label: "Dégâts de chute" },
+      fire_damage: { label: "Dégâts du feu" },
+      drowning_damage: { label: "Dégâts de noyade" },
+      freeze_damage: {
+        label: "Dégâts du gel",
+        description: "Dans la neige poudreuse.",
+      },
+      ender_pearls_vanish_on_death: {
+        label: "Perles de l'Ender perdues à la mort",
+        description:
+          "Les perles lancées disparaissent quand leur lanceur meurt.",
+      },
+      locator_bar: {
+        label: "Barre de localisation",
+        description:
+          "Montre dans quelle direction se trouvent les autres joueurs.",
+      },
+      show_death_messages: {
+        label: "Messages de mort",
+        description: "Annonce la mort des joueurs dans le chat.",
+      },
+      show_advancement_messages: {
+        label: "Annoncer les progrès",
+        description:
+          "Annonce les progrès (advancements) des joueurs dans le chat.",
+      },
+      limited_crafting: {
+        label: "Fabrication limitée",
+        description: "Seules les recettes débloquées peuvent être fabriquées.",
+      },
+      reduced_debug_info: {
+        label: "Écran F3 réduit",
+        description:
+          "Masque les coordonnées et d'autres infos de l'écran de débogage.",
+      },
+      allow_entering_nether_using_portals: {
+        label: "Autoriser le Nether",
+        description: "Les portails permettent d'aller dans le Nether.",
+      },
+      players_nether_portal_default_delay: {
+        label: "Délai des portails (ticks)",
+        description:
+          "Temps à passer dans un portail du Nether avant le voyage, en survie. 20 ticks = 1 seconde.",
+      },
+      players_nether_portal_creative_delay: {
+        label: "Délai des portails en créatif (ticks)",
+      },
+      spectators_generate_chunks: {
+        label: "Les spectateurs génèrent le monde",
+        description:
+          "Les joueurs en spectateur font apparaître de nouveaux chunks.",
+      },
+      // Game rules: mobs
+      spawn_mobs: {
+        label: "Apparition des créatures",
+        description: "Animaux et monstres apparaissent naturellement.",
+      },
+      spawn_monsters: {
+        label: "Apparition des monstres",
+        description: "Les monstres hostiles apparaissent naturellement.",
+      },
+      spawn_phantoms: {
+        label: "Apparition des phantoms",
+        description: "Les phantoms attaquent les joueurs qui ne dorment pas.",
+      },
+      spawn_patrols: { label: "Patrouilles de pillards" },
+      spawn_wandering_traders: { label: "Marchands ambulants" },
+      spawn_wardens: {
+        label: "Apparition des wardens",
+        description: "Les hurleurs sculk peuvent faire apparaître le warden.",
+      },
+      raids: {
+        label: "Raids",
+        description:
+          "Les pillards attaquent les villages (effet Mauvais présage).",
+      },
+      mob_griefing: {
+        label: "Les créatures modifient le monde",
+        description:
+          "Creepers qui détruisent, endermen qui prennent des blocs, villageois qui récoltent…",
+      },
+      forgive_dead_players: {
+        label: "Les créatures pardonnent aux morts",
+        description:
+          "Les créatures neutres en colère se calment quand leur cible meurt.",
+      },
+      universal_anger: {
+        label: "Colère générale",
+        description:
+          "Une créature neutre en colère attaque tous les joueurs proches, pas seulement son agresseur.",
+      },
+      max_entity_cramming: {
+        label: "Entassement maximum",
+        description:
+          "Créatures sur un même bloc avant qu'elles subissent des dégâts. 0 pour désactiver.",
+      },
+      spawner_blocks_work: {
+        label: "Les générateurs de monstres fonctionnent",
+        description: "Les spawners font apparaître des créatures.",
+      },
+      // Game rules: world
+      advance_time: {
+        label: "Cycle jour/nuit",
+        description: "Le temps passe. Désactivé, l'heure reste figée.",
+      },
+      advance_weather: {
+        label: "Cycle de la météo",
+        description: "La météo change. Désactivé, elle reste figée.",
+      },
+      random_tick_speed: {
+        label: "Vitesse des ticks aléatoires",
+        description:
+          "Vitesse de pousse des cultures et de l'herbe, de chute des feuilles… 0 pour tout arrêter.",
+      },
+      fire_spread_radius_around_player: {
+        label: "Propagation du feu (rayon en blocs)",
+        description:
+          "Le feu se propage seulement près des joueurs. 0 = il ne se propage pas, -1 = partout.",
+      },
+      doFireTick: {
+        label: "Propagation du feu",
+        description: "Le feu se propage et s'éteint naturellement.",
+      },
+      allowFireTicksAwayFromPlayer: {
+        label: "Feu loin des joueurs",
+        description: "Le feu se propage même loin de tout joueur.",
+      },
+      spread_vines: { label: "Pousse des lianes" },
+      water_source_conversion: {
+        label: "Création de sources d'eau",
+        description: "Deux sources d'eau côte à côte en forment une nouvelle.",
+      },
+      lava_source_conversion: {
+        label: "Création de sources de lave",
+        description:
+          "Deux sources de lave côte à côte en forment une nouvelle.",
+      },
+      max_snow_accumulation_height: {
+        label: "Épaisseur de neige maximum",
+        description:
+          "Couches de neige qui s'accumulent quand il neige (0 à 8).",
+      },
+      tnt_explodes: { label: "La TNT explose" },
+      projectiles_can_break_blocks: {
+        label: "Les projectiles cassent des blocs",
+        description:
+          "Certains projectiles cassent des blocs (pots décorés, chorus…).",
+      },
+      global_sound_events: {
+        label: "Sons globaux",
+        description:
+          "Certains sons (wither, dragon) sont entendus par tous les joueurs.",
+      },
+      // Game rules: drops
+      block_drops: {
+        label: "Les blocs donnent des objets",
+        description: "Les blocs cassés lâchent leurs objets.",
+      },
+      mob_drops: {
+        label: "Butin des créatures",
+        description: "Les créatures lâchent des objets en mourant.",
+      },
+      entity_drops: {
+        label: "Butin des entités",
+        description:
+          "Wagonnets, bateaux, cadres… lâchent leurs objets quand on les casse.",
+      },
+      block_explosion_drop_decay: {
+        label: "Perte d'objets (explosions de blocs)",
+        description:
+          "Une partie des blocs détruits par une explosion de bloc ne donne rien.",
+      },
+      mob_explosion_drop_decay: {
+        label: "Perte d'objets (explosions de créatures)",
+        description:
+          "Une partie des blocs détruits par un creeper ne donne rien.",
+      },
+      tnt_explosion_drop_decay: {
+        label: "Perte d'objets (TNT)",
+        description: "Une partie des blocs détruits par la TNT ne donne rien.",
+      },
+      // Game rules: commands
+      command_block_output: {
+        label: "Messages des blocs de commande",
+        description:
+          "Les blocs de commande écrivent dans le chat des opérateurs.",
+      },
+      command_blocks_work: { label: "Les blocs de commande fonctionnent" },
+      send_command_feedback: {
+        label: "Retour des commandes",
+        description: "Affiche le résultat des commandes dans le chat.",
+      },
+      log_admin_commands: {
+        label: "Annoncer les commandes des opérateurs",
+        description: "Les autres opérateurs voient les commandes utilisées.",
+      },
+      max_command_sequence_length: {
+        label: "Longueur max. des chaînes de commandes",
+        description: "Pour les fonctions et les blocs de commande en chaîne.",
+      },
+      max_command_forks: { label: "Branches max. des commandes" },
+      max_block_modifications: {
+        label: "Blocs max. modifiés par commande",
+        description: "Limite de /fill, /clone…",
+      },
+      player_movement_check: {
+        label: "Vérifier les mouvements des joueurs",
+        description:
+          "Anti-triche : expulse les joueurs qui se déplacent trop vite.",
+      },
+      elytra_movement_check: {
+        label: "Vérifier les vols en élytres",
+        description: "Anti-triche pour les élytres.",
+      },
+    },
   },
   notifications: {
     killed:

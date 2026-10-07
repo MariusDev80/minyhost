@@ -1,9 +1,18 @@
-import { ArrowLeft, Crown, ServerOff, Terminal, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  Crown,
+  ServerOff,
+  Settings2,
+  Terminal,
+  Users,
+} from "lucide-react";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Console } from "@/components/server/Console";
 import { DeleteServerDialog } from "@/components/server/DeleteServerDialog";
 import { OperatorsPanel } from "@/components/server/OperatorsPanel";
+import { RestartBanner } from "@/components/server/RestartBanner";
+import { ServerSettingsPanel } from "@/components/server/settings/ServerSettingsPanel";
 import { loaderInfo } from "@/components/server/loaders";
 import { ServerControls } from "@/components/server/ServerControls";
 import { StatusBadge } from "@/components/server/StatusBadge";
@@ -77,6 +86,8 @@ function ServerDetail({ server }: { server: ServerInfo }) {
         <InfoTile label={t.server.java} value={String(server.javaVersion)} />
       </div>
 
+      <RestartBanner server={server} />
+
       <Tabs defaultValue="console">
         <TabsList>
           <TabsTrigger value="console">
@@ -93,6 +104,10 @@ function ServerDetail({ server }: { server: ServerInfo }) {
             {t.operators.tab}
             <TabCount count={operators.data?.length} />
           </TabsTrigger>
+          <TabsTrigger value="settings">
+            <Settings2 />
+            {t.gameSettings.tab}
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="console" className="pt-2">
           <Console server={server} />
@@ -102,6 +117,9 @@ function ServerDetail({ server }: { server: ServerInfo }) {
         </TabsContent>
         <TabsContent value="operators" className="pt-2">
           <OperatorsPanel serverId={server.id} />
+        </TabsContent>
+        <TabsContent value="settings" className="pt-2">
+          <ServerSettingsPanel server={server} />
         </TabsContent>
       </Tabs>
     </>

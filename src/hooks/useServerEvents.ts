@@ -8,6 +8,7 @@ import { events } from "@/lib/tauri";
 import { useConsoleStore } from "@/stores/console";
 import { useUiStore } from "@/stores/ui";
 import type { ServerInfo } from "@/types";
+import { gameSettingsKey } from "./useGameSettings";
 import { operatorsKey } from "./useOperators";
 import { serversKey } from "./useServers";
 import { whitelistKey } from "./useWhitelist";
@@ -23,7 +24,19 @@ export function useServerEvents() {
     () =>
       events.onServerStatus(({ id, status }) => {
         queryClient.setQueryData<ServerInfo[]>(serversKey, (servers) =>
-          servers?.map((s) => (s.id === id ? { ...s, status } : s)),
+          servers?.map((s) =>
+            s.id === id
+              ? {
+                  ...s,
+                  status,
+                  // A fresh process runs with the latest settings.
+                  needsRestart:
+                    status === "starting" || status === "stopped"
+                      ? false
+                      : s.needsRestart,
+                }
+              : s,
+          ),
         );
         // Each start begins with a fresh console.
         if (status === "starting") clearConsole(id);
@@ -42,6 +55,9 @@ export function useServerEvents() {
         // e.g. "Made Steve a server operator" (after `op` / `deop`).
         if (/server operator/i.test(line))
           void queryClient.invalidateQueries({ queryKey: operatorsKey(id) });
+        // e.g. "Game rule keep_inventory is now set to true", from anywhere.
+        if (/game ?rule .* set to/i.test(line))
+          void queryClient.invalidateQueries({ queryKey: gameSettingsKey(id) });
       }),
     [appendLine, queryClient],
   );

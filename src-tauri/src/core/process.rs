@@ -9,7 +9,7 @@
 //!   stop()   -> Stopping -> process exits -> Stopped
 //!   crash    -> process exits on its own  -> Stopped + Crashed event
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Arc;
@@ -20,7 +20,8 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::{oneshot, watch, Mutex};
 
-use crate::core::{eula, instances, java, properties};
+use crate::core::game_settings::SettingValue;
+use crate::core::{eula, game_rules, instances, java, properties};
 use crate::error::{AppError, AppResult};
 use crate::paths::{server_files, AppPaths};
 
@@ -83,17 +84,25 @@ struct RunningServer {
     kill: Option<oneshot::Sender<()>>,
     /// Becomes `true` once the process has exited.
     exited: watch::Receiver<bool>,
+    /// Sent once the server is ready (pending game rules, see `core/game_rules.rs`).
+    startup_commands: Vec<String>,
+    /// Game rule values seen in the console since start (newer than the save files).
+    live_rules: BTreeMap<String, SettingValue>,
+    /// Settings were saved while running: they apply on the next start.
+    needs_restart: bool,
 }
 
 #[derive(Clone)]
 pub struct ProcessManager {
+    paths: AppPaths,
     servers: Arc<Mutex<HashMap<String, RunningServer>>>,
     sink: EventSink,
 }
 
 impl ProcessManager {
-    pub fn new(sink: EventSink) -> Self {
+    pub fn new(paths: AppPaths, sink: EventSink) -> Self {
         Self {
+            paths,
             servers: Arc::default(),
             sink,
         }
@@ -108,6 +117,47 @@ impl ProcessManager {
             .collect()
     }
 
+    /// Running servers whose settings changed since they started.
+    pub async fn restart_pending(&self) -> HashSet<String> {
+        let servers = self.servers.lock().await;
+        servers
+            .iter()
+            .filter(|(_, server)| server.needs_restart)
+            .map(|(id, _)| id.clone())
+            .collect()
+    }
+
+    /// Remembers that `id` must restart to apply new settings (no-op if stopped).
+    pub async fn mark_needs_restart(&self, id: &str) {
+        if let Some(server) = self.servers.lock().await.get_mut(id) {
+            server.needs_restart = true;
+        }
+    }
+
+    /// Whether the server reads console commands now (starting or running).
+    pub async fn accepts_commands(&self, id: &str) -> bool {
+        matches!(
+            self.status(id).await,
+            ServerStatus::Starting | ServerStatus::Running
+        )
+    }
+
+    /// Game rule values seen in the console (empty if the server is stopped).
+    pub async fn live_rules(&self, id: &str) -> BTreeMap<String, SettingValue> {
+        let servers = self.servers.lock().await;
+        servers
+            .get(id)
+            .map(|server| server.live_rules.clone())
+            .unwrap_or_default()
+    }
+
+    /// Remembers rule values just sent, before the console confirms them.
+    pub async fn record_live_rules(&self, id: &str, rules: &BTreeMap<String, SettingValue>) {
+        if let Some(server) = self.servers.lock().await.get_mut(id) {
+            server.live_rules.extend(rules.clone());
+        }
+    }
+
     pub async fn status(&self, id: &str) -> ServerStatus {
         let servers = self.servers.lock().await;
         servers
@@ -116,10 +166,10 @@ impl ProcessManager {
     }
 
     /// Checks that the instance can start, then launches it (CLAUDE.md 5.3).
-    pub async fn start(&self, paths: &AppPaths, id: &str) -> AppResult<()> {
-        let instance = instances::load(paths, id)?;
-        let dir = paths.server_dir(id);
-        let java = java::executable(paths, instance.java_version);
+    pub async fn start(&self, id: &str) -> AppResult<()> {
+        let instance = instances::load(&self.paths, id)?;
+        let dir = self.paths.server_dir(id);
+        let java = java::executable(&self.paths, instance.java_version);
 
         // Lock for the whole start so two clicks cannot launch two processes.
         let mut servers = self.servers.lock().await;
@@ -166,18 +216,28 @@ impl ProcessManager {
                 stdin,
                 kill: Some(kill_tx),
                 exited: exited_rx,
+                startup_commands: game_rules::commands(
+                    &instance.mc_version,
+                    instance.loader,
+                    &instance.pending_game_rules,
+                ),
+                live_rules: instance.pending_game_rules.clone(),
+                needs_restart: false,
             },
         );
         drop(servers);
         self.emit_status(id, ServerStatus::Starting);
 
+        let mc = instance.mc_version;
+        tokio::spawn(self.clone().read_output(
+            id.to_string(),
+            mc.clone(),
+            stdout,
+            ConsoleStream::Stdout,
+        ));
         tokio::spawn(
             self.clone()
-                .read_output(id.to_string(), stdout, ConsoleStream::Stdout),
-        );
-        tokio::spawn(
-            self.clone()
-                .read_output(id.to_string(), stderr, ConsoleStream::Stderr),
+                .read_output(id.to_string(), mc, stderr, ConsoleStream::Stderr),
         );
         tokio::spawn(
             self.clone()
@@ -253,8 +313,15 @@ impl ProcessManager {
         }
     }
 
-    /// Forwards each output line to the UI and detects the end of startup.
-    async fn read_output(self, id: String, output: impl AsyncRead + Unpin, stream: ConsoleStream) {
+    /// Forwards each output line to the UI, detects the end of startup and
+    /// keeps track of game rule changes.
+    async fn read_output(
+        self,
+        id: String,
+        mc_version: String,
+        output: impl AsyncRead + Unpin,
+        stream: ConsoleStream,
+    ) {
         let mut reader = BufReader::new(output);
         let mut buffer = Vec::new();
         loop {
@@ -267,8 +334,12 @@ impl ProcessManager {
             let line = String::from_utf8_lossy(&buffer).trim_end().to_string();
 
             if is_ready_line(&line) {
-                self.set_status(&id, ServerStatus::Starting, ServerStatus::Running)
-                    .await;
+                self.on_ready(&id).await;
+            }
+            if let Some((key, value)) = game_rules::parse_change(&line, &mc_version) {
+                if let Some(server) = self.servers.lock().await.get_mut(&id) {
+                    server.live_rules.insert(key, value);
+                }
             }
             (self.sink)(ServerEvent::Console {
                 id: id.clone(),
@@ -305,20 +376,34 @@ impl ProcessManager {
         }
     }
 
-    /// Moves a server from `from` to `to`; does nothing if it is in another state.
-    async fn set_status(&self, id: &str, from: ServerStatus, to: ServerStatus) {
-        let changed = {
+    /// The server accepts players: mark it running and send the game rules
+    /// waiting in `instance.json`, which are then cleared.
+    async fn on_ready(&self, id: &str) {
+        let applied_pending = {
             let mut servers = self.servers.lock().await;
-            match servers.get_mut(id) {
-                Some(server) if server.status == from => {
-                    server.status = to;
-                    true
-                }
-                _ => false,
+            let Some(server) = servers.get_mut(id) else {
+                return;
+            };
+            if server.status != ServerStatus::Starting {
+                return;
             }
+            server.status = ServerStatus::Running;
+            let commands = std::mem::take(&mut server.startup_commands);
+            for command in &commands {
+                let _ = server
+                    .stdin
+                    .write_all(format!("{command}\n").as_bytes())
+                    .await;
+            }
+            let _ = server.stdin.flush().await;
+            !commands.is_empty()
         };
-        if changed {
-            self.emit_status(id, to);
+        self.emit_status(id, ServerStatus::Running);
+
+        if applied_pending {
+            if let Err(err) = clear_pending_game_rules(&self.paths, id) {
+                eprintln!("failed to clear pending game rules of {id}: {err}");
+            }
         }
     }
 
@@ -328,6 +413,13 @@ impl ProcessManager {
             status,
         });
     }
+}
+
+/// Pending game rules were sent: they now live in the world.
+fn clear_pending_game_rules(paths: &AppPaths, id: &str) -> AppResult<()> {
+    let mut instance = instances::load(paths, id)?;
+    instance.pending_game_rules.clear();
+    instances::save(paths, &instance)
 }
 
 /// Pre-start checks: EULA, files, RAM, port.

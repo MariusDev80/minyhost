@@ -26,6 +26,9 @@ pub enum AppError {
     #[error("invalid archive: {0}")]
     Zip(#[from] zip::result::ZipError),
 
+    #[error("invalid data: {0}")]
+    InvalidData(String),
+
     #[error("checksum mismatch for {0}")]
     HashMismatch(String),
 
@@ -71,6 +74,7 @@ impl AppError {
             Self::Io(_) => "io",
             Self::Json(_) => "invalidData",
             Self::Zip(_) => "invalidData",
+            Self::InvalidData(_) => "invalidData",
             Self::HashMismatch(_) => "hashMismatch",
             Self::ServerNotFound(_) => "serverNotFound",
             Self::VersionUnavailable(_) => "versionUnavailable",

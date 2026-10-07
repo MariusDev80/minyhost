@@ -96,6 +96,10 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
         │   ├── eula.rs           # eula.txt
         │   ├── whitelist.rs      # whitelist.json
         │   ├── operators.rs      # ops.json (opérateurs)
+        │   ├── game_settings.rs  # Paramètres : server.properties + gamerules
+        │   ├── game_rules.rs     # Catalogue des gamerules (noms selon la version)
+        │   ├── version.rs        # Comparaison de versions Minecraft
+        │   ├── nbt.rs            # Lecture des fichiers de sauvegarde (format NBT)
         │   ├── players.rs        # Profils Mojang (pseudo -> UUID, skins)
         │   ├── e2e_tests.rs      # Tests bout en bout (--ignored)
         │   └── backup.rs
@@ -140,11 +144,14 @@ Exemple de `instance.json` :
   "javaVersion": 21,
   "memoryMb": 4096,
   "port": 25565,
-  "createdAt": "2026-10-05T12:00:00Z"
+  "createdAt": "2026-10-05T12:00:00Z",
+  "pendingGameRules": { "keep_inventory": true }
 }
 ```
 
 Chaque serveur est **autonome dans son dossier** : on doit pouvoir le copier ailleurs et le relancer.
+
+Les gamerules vivent dans le monde, qui est la source de vérité : MinyHost les lit dans `level.dat` (≤ 1.21.10) ou `game_rules.dat` (26.x, un par dimension sur Paper), et suit la console quand le serveur tourne (le monde n'est sauvegardé que toutes les 5 minutes). `pendingGameRules` ne contient que les changements faits dans MinyHost serveur arrêté (ou à la création, avant que le monde existe) : ils sont envoyés (`/gamerule`) au démarrage suivant, puis effacés. Serveur allumé, un changement est envoyé immédiatement. Depuis 1.21.11, Minecraft a renommé toutes les gamerules (`keepInventory` → `keep_inventory`) : `core/game_rules.rs` connaît les deux noms.
 
 ---
 

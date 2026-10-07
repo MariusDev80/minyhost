@@ -7,4 +7,5 @@
 pub mod operators;
 pub mod process;
 pub mod servers;
+pub mod settings;
 pub mod whitelist;

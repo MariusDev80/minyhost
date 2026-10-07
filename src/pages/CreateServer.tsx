@@ -1,10 +1,17 @@
 import { useState } from "react";
-import { AlertCircle, ArrowLeft, ExternalLink } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ChevronDown,
+  ExternalLink,
+  SlidersHorizontal,
+} from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CreationProgress } from "@/components/server/CreationProgress";
 import { loaders } from "@/components/server/loaders";
+import { GameSettingsForm } from "@/components/server/settings/GameSettingsForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,13 +26,15 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCreateServer } from "@/hooks/useServers";
+import { useSettingsCatalog } from "@/hooks/useGameSettings";
 import { useVersions } from "@/hooks/useVersions";
 import { errorMessage } from "@/lib/errors";
+import { emptySettings, onlyChanged } from "@/lib/gameSettings";
 import { openExternal } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
 import { useUiStore } from "@/stores/ui";
-import type { Loader, NewServer } from "@/types";
+import type { GameSettings, Loader, NewServer } from "@/types";
 
 const MEMORY_OPTIONS_MB = [2048, 3072, 4096, 6144, 8192];
 const DEFAULT_MEMORY_MB = 3072;
@@ -105,6 +114,10 @@ function CreateServerForm({
     initial?.memoryMb ?? DEFAULT_MEMORY_MB,
   );
   const [eulaAccepted, setEulaAccepted] = useState(false);
+  const [settings, setSettings] = useState<GameSettings>(
+    initial?.settings ?? emptySettings,
+  );
+  const [showSettings, setShowSettings] = useState(false);
 
   const versions = useVersions(loader);
   // Latest version by default, or when the picked one does not exist for this type.
@@ -112,6 +125,7 @@ function CreateServerForm({
     pickedVersion && versions.data?.includes(pickedVersion)
       ? pickedVersion
       : versions.data?.[0];
+  const catalog = useSettingsCatalog(mcVersion);
 
   const canSubmit = name.trim() !== "" && mcVersion && eulaAccepted;
 
@@ -126,6 +140,8 @@ function CreateServerForm({
           mcVersion,
           memoryMb,
           eulaAccepted,
+          // Only what the user changed; the rest keeps Minecraft's defaults.
+          settings: catalog.data && onlyChanged(catalog.data, settings),
         });
       }}
     >
@@ -223,6 +239,45 @@ function CreateServerForm({
               ))}
             </div>
           </Field>
+
+          <div className="rounded-lg border">
+            <button
+              type="button"
+              aria-expanded={showSettings}
+              onClick={() => setShowSettings(!showSettings)}
+              className="flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors outline-none hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <SlidersHorizontal className="size-4 shrink-0 text-primary" />
+              <span className="flex-1">
+                <span className="block text-sm font-medium">
+                  {t.gameSettings.creationToggle}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {t.gameSettings.creationHint}
+                </span>
+              </span>
+              <ChevronDown
+                className={cn(
+                  "size-4 shrink-0 transition-transform",
+                  showSettings && "rotate-180",
+                )}
+              />
+            </button>
+            {showSettings && (
+              <div className="border-t p-3">
+                {catalog.data ? (
+                  <GameSettingsForm
+                    catalog={catalog.data}
+                    value={settings}
+                    onChange={setSettings}
+                    mode="create"
+                  />
+                ) : (
+                  <Skeleton className="h-32 rounded-lg" />
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="space-y-1 rounded-lg border p-3">
             <div className="flex items-center gap-3">
