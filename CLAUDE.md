@@ -67,13 +67,17 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
 │   ├── components/
 │   │   ├── ui/                   # Composants shadcn/ui
 │   │   ├── layout/               # Sidebar, TitleBar, PageHeader
-│   │   └── server/               # ServerCard, Console, StatusBadge…
-│   ├── pages/                    # Home, CreateServer, ServerDetail, Settings
+│   │   ├── server/               # ServerCard, Console, StatusBadge…
+│   │   └── tunnel/               # Accès Internet (playit.gg)
+│   ├── pages/                    # Home, CreateServer, ServerDetail, Settings, Help (FAQ)
 │   ├── hooks/                    # useServers, useVersions… (TanStack Query)
 │   ├── stores/                   # Stores Zustand
 │   ├── lib/
 │   │   ├── tauri.ts              # Wrappers typés autour de invoke/listen
+│   │   ├── errors.ts             # Erreur Rust -> message lisible (i18n)
+│   │   ├── skin.ts               # Lecture d'un skin (tête du joueur)
 │   │   └── utils.ts
+│   ├── i18n/                     # Textes de l'interface : fr.ts (référence), en.ts…
 │   └── types/                    # Types partagés avec Rust
 └── src-tauri/                    # Backend Rust
     ├── Cargo.toml
@@ -85,11 +89,24 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
         ├── commands/             # Fonctions exposées au frontend (fines)
         ├── core/                 # Logique métier, indépendante de Tauri
         │   ├── instances.rs      # CRUD des serveurs
+        │   ├── create.rs         # Pipeline de création (5.1)
         │   ├── java.rs           # Détection / téléchargement des JRE
         │   ├── providers/        # vanilla.rs, paper.rs, fabric.rs
         │   ├── process.rs        # Lancement, arrêt, console
         │   ├── properties.rs     # Lecture / écriture server.properties
+        │   ├── eula.rs           # eula.txt
+        │   ├── whitelist.rs      # whitelist.json
+        │   ├── operators.rs      # ops.json (opérateurs)
+        │   ├── game_settings.rs  # Paramètres : server.properties + gamerules
+        │   ├── game_rules.rs     # Catalogue des gamerules (noms selon la version)
+        │   ├── version.rs        # Comparaison de versions Minecraft
+        │   ├── nbt.rs            # Lecture des fichiers de sauvegarde (format NBT)
+        │   ├── players.rs        # Profils Mojang (pseudo -> UUID, skins)
+        │   ├── tunnel.rs         # Accès Internet : agent playit.gg intégré (5.7)
+        │   ├── e2e_tests.rs      # Tests bout en bout (--ignored)
         │   └── backup.rs
+        ├── events.rs             # Événements envoyés au frontend
+        ├── state.rs              # État partagé des commandes
         ├── download.rs           # Téléchargement + vérification de hash
         ├── paths.rs              # Chemins AppData
         └── error.rs              # Type d'erreur commun
@@ -104,6 +121,7 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
 ```
 %APPDATA%/MinyHost/
 ├── settings.json                 # Préférences globales
+├── playit.json                   # Clé et nom de l'agent playit.gg du compte lié (5.7)
 ├── java/
 │   ├── 21/                       # JRE Temurin 21
 │   └── 17/
@@ -129,11 +147,15 @@ Exemple de `instance.json` :
   "javaVersion": 21,
   "memoryMb": 4096,
   "port": 25565,
-  "createdAt": "2026-10-05T12:00:00Z"
+  "createdAt": "2026-10-05T12:00:00Z",
+  "pendingGameRules": { "keep_inventory": true },
+  "playitTunnelId": "3f1c…"
 }
 ```
 
 Chaque serveur est **autonome dans son dossier** : on doit pouvoir le copier ailleurs et le relancer.
+
+Les gamerules vivent dans le monde, qui est la source de vérité : MinyHost les lit dans `level.dat` (≤ 1.21.10) ou `game_rules.dat` (26.x, un par dimension sur Paper), et suit la console quand le serveur tourne (le monde n'est sauvegardé que toutes les 5 minutes). `pendingGameRules` ne contient que les changements faits dans MinyHost serveur arrêté (ou à la création, avant que le monde existe) : ils sont envoyés (`/gamerule`) au démarrage suivant, puis effacés. Serveur allumé, un changement est envoyé immédiatement. Depuis 1.21.11, Minecraft a renommé toutes les gamerules (`keepInventory` → `keep_inventory`) : `core/game_rules.rs` connaît les deux noms.
 
 ---
 
@@ -152,11 +174,14 @@ Chaque serveur est **autonome dans son dossier** : on doit pouvoir le copier ail
 5. **L'EULA de Mojang** est présentée à l'utilisateur avec un lien. `eula.txt` n'est écrit à `true` qu'après son acceptation explicite.
 
 ### 5.2 Choix de Java
+La source de vérité est le champ `javaVersion.majorVersion` du fichier de version Mojang (`providers/vanilla.rs`, `required_java`), utilisé pour tous les types de serveur. Il est arrondi à la LTS Temurin supérieure (`java.rs`, `runtime_for`). À titre indicatif (vérifié en octobre 2026) :
+
 | Version Minecraft | Java requis |
 |---|---|
-| 1.20.5 et plus | 21 |
+| 26.1 et plus | 25 |
+| 1.20.5 à 1.21.x | 21 |
 | 1.18 à 1.20.4 | 17 |
-| 1.17.x | 16 (17 accepté) |
+| 1.17.x | 16 (17 installé) |
 | 1.16.5 et moins | 8 |
 
 Les JRE sont téléchargés depuis l'API Adoptium (Temurin) et stockés dans `java/<version>/`. On n'utilise jamais le Java installé sur le système.
@@ -191,7 +216,12 @@ Les JRE sont téléchargés depuis l'API Adoptium (Temurin) et stockés dans `ja
 ### 5.7 Accès des amis (phase 3)
 - **LAN** : afficher l'IP locale + le port.
 - **Pare-feu** : proposer d'ajouter une règle Windows (demande d'élévation explicite).
-- **Internet** : intégration d'un tunnel (playit.gg ou Tailscale), après vérification de leurs conditions d'utilisation et de redistribution.
+- **Internet** : tunnel playit.gg (`core/tunnel.rs`). L'agent officiel (`playit-agent-core`, licence BSD-2-Clause) est intégré au backend : pas de programme ni de service Windows à installer, pas de droits administrateur.
+  - Chaque utilisateur lie **son propre compte** playit.gg (code de réclamation validé sur `playit.gg/claim/<code>`, agent `self-managed`). Les CGU de playit.gg (20/02/2026) interdisent de revendre ou de mettre le service à disposition de tiers : MinyHost ne fournit jamais de compte ni de tunnel partagé.
+  - Un tunnel `minecraft-java` par serveur, créé uniquement quand l'utilisateur active l'accès Internet sur la page du serveur (`playitTunnelId` dans `instance.json`), supprimé quand il le désactive ou supprime le serveur.
+  - L'agent ne tourne que si un serveur ouvert sur Internet est démarré, et ne relaie que les tunnels des serveurs démarrés, vers `127.0.0.1:<port>`.
+  - Un agent ne peut pas se supprimer lui-même (`/agents/delete` refuse la clé d'agent) : à la déconnexion, l'utilisateur le supprime sur playit.gg. MinyHost renomme son agent (`MinyHost <PC> <date>`) et affiche son nom et son identifiant dans les Paramètres pour le distinguer des anciens.
+  - Les crates sont épinglées sur un tag Git du dépôt `playit-cloud/playit-agent` (les versions crates.io sont en retard) : les mettre à jour avec les releases de l'agent.
 - Bouton « Copier l'adresse » dans tous les cas.
 
 ---
@@ -204,6 +234,8 @@ Les JRE sont téléchargés depuis l'API Adoptium (Temurin) et stockés dans `ja
 | Paper | API PaperMC (`fill.papermc.io`, v3) |
 | Fabric | `https://meta.fabricmc.net/v2/` |
 | Java (Temurin) | `https://api.adoptium.net/v3/` |
+| Joueurs (UUID, skins) | `api.mojang.com`, `sessionserver.mojang.com`, `textures.minecraft.net` |
+| Tunnel Internet | `https://api.playit.gg` (via `playit-api-client`) |
 | Mods / plugins (phase 4) | `https://api.modrinth.com/v2/` |
 
 Règles :
@@ -247,6 +279,7 @@ npm run tauri dev         # Lancer l'app en développement
 npm run tauri build       # Construire l'installeur
 npx shadcn@latest add <composant>
 cargo test --manifest-path src-tauri/Cargo.toml
+cargo test --manifest-path src-tauri/Cargo.toml -- --ignored   # Bout en bout (télécharge Java + serveurs)
 cargo clippy --manifest-path src-tauri/Cargo.toml
 npm run lint
 ```

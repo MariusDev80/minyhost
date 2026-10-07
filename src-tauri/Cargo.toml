@@ -28,6 +28,16 @@ thiserror = "2.0.21"
 zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 sha1 = "0.11.0"
 sha2 = "0.11.0"
+base64 = "0.22"
+flate2 = "1"
+# Official playit.gg agent (BSD-2-Clause), embedded for Internet access (CLAUDE.md 5.7).
+# The crates.io releases lag behind the agent, so they are pinned to a release tag.
+playit-agent-core = { git = "https://github.com/playit-cloud/playit-agent", tag = "v1.0.12" }
+playit-api-client = { git = "https://github.com/playit-cloud/playit-agent", tag = "v1.0.12" }
+# Stops the embedded agent (its `CancellationToken`); already used by the agent.
+tokio-util = "0.7"
+# Tunnel ids stored in instance.json and random claim codes.
+uuid = { version = "1", features = ["serde", "v4"] }
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

@@ -1,0 +1,72 @@
+# Builds the Windows installer (NSIS).
+# - Push a tag `vX.Y.Z` -> draft GitHub release with the installer attached
+#   (review it on GitHub, then click "Publish").
+# - Manual run (Actions tab > Release > Run workflow) -> test build, installer
+#   downloadable from the run's "Artifacts" section, no release created.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write # Create the release and upload its assets.
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The tag must match the app version, otherwise the installer name and
+      # the version shown in the app would disagree with the release.
+      - name: Check tag matches app version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match version ${version} in src-tauri/tauri.conf.json"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build and publish
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Empty on manual runs: build only, no release.
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          releaseName: MinyHost __VERSION__
+          releaseDraft: true
+          releaseBody: |
+            ## Installation
+
+            1. Télécharge le fichier **`MinyHost_…_x64-setup.exe`** ci-dessous (section *Assets*).
+            2. Lance-le et suis l'installation (pas besoin de droits administrateur).
+
+            L'exécutable n'est pas encore signé : Windows peut afficher « Windows a protégé votre ordinateur ».
+            Clique sur **Informations complémentaires** puis **Exécuter quand même**.
+          # The Tauri updater is not set up yet (phase 4).
+          uploadUpdaterJson: false
+          uploadWorkflowArtifacts: true
