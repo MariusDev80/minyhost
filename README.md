@@ -19,6 +19,16 @@ npm run format       # Prettier
 cargo clippy --manifest-path src-tauri/Cargo.toml
 ```
 
+## Publier une version
+
+Le workflow [`release.yml`](.github/workflows/release.yml) compile l'installeur Windows sur GitHub Actions.
+
+1. Mettre à jour la version dans `package.json`, `src-tauri/tauri.conf.json` et `src-tauri/Cargo.toml`.
+2. Pousser un tag identique : `git tag v0.2.0 && git push origin v0.2.0`.
+3. Une release **brouillon** est créée avec l'installeur `MinyHost_<version>_x64-setup.exe` : la relire sur GitHub puis la publier.
+
+Pour tester une compilation sans release : onglet **Actions** > **Release** > **Run workflow**, l'installeur est téléchargeable dans les *Artifacts* du run.
+
 ## Licence
 
 [MIT](LICENSE)
