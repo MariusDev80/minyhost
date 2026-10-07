@@ -1,5 +1,8 @@
-import { Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { FolderOpen, Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { PlayitSettingsCard } from "@/components/tunnel/PlayitAccount";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -8,6 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { showError } from "@/lib/errors";
+import { commands } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
 import { localeNames, locales, systemLocale, t } from "@/i18n";
 import { useUiStore, type Language, type Theme } from "@/stores/ui";
@@ -34,6 +39,8 @@ export function SettingsPage() {
           <LanguageSetting />
         </CardContent>
       </Card>
+      <PlayitSettingsCard />
+      <FilesCard />
     </div>
   );
 }
@@ -124,5 +131,42 @@ function LanguageSetting() {
         </SelectContent>
       </Select>
     </div>
+  );
+}
+
+function FilesCard() {
+  const path = useQuery({
+    queryKey: ["servers-folder-path"],
+    queryFn: commands.serversFolderPath,
+    staleTime: Infinity,
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t.settings.files}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          {t.settings.filesDescription}
+        </p>
+        {path.data && (
+          <p
+            data-selectable
+            className="truncate rounded-lg border bg-muted/50 px-3 py-2 font-mono text-sm"
+            title={path.data}
+          >
+            {path.data}
+          </p>
+        )}
+        <Button
+          variant="outline"
+          onClick={() => commands.openServersFolder().catch(showError)}
+        >
+          <FolderOpen data-icon="inline-start" />
+          {t.settings.openServersFolder}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

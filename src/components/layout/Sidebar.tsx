@@ -1,4 +1,11 @@
-import { Home, Palette, Server, Settings, type LucideIcon } from "lucide-react";
+import {
+  CircleHelp,
+  Home,
+  Palette,
+  Server,
+  Settings,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
 import { useUiStore, type Route } from "@/stores/ui";
@@ -32,6 +39,7 @@ function bottomItems(): NavItem[] {
           },
         ]
       : []),
+    { route: "help", label: t.nav.help, icon: CircleHelp },
     { route: "settings", label: t.nav.settings, icon: Settings },
   ];
 }

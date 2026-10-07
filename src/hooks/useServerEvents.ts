@@ -7,10 +7,11 @@ import { t } from "@/i18n";
 import { events } from "@/lib/tauri";
 import { useConsoleStore } from "@/stores/console";
 import { useUiStore } from "@/stores/ui";
-import type { ServerInfo } from "@/types";
+import type { ServerInfo, TunnelState } from "@/types";
 import { gameSettingsKey } from "./useGameSettings";
 import { operatorsKey } from "./useOperators";
 import { serversKey } from "./useServers";
+import { tunnelKey } from "./useTunnel";
 import { whitelistKey } from "./useWhitelist";
 
 export function useServerEvents() {
@@ -71,6 +72,23 @@ export function useServerEvents() {
         toast.error(t.notifications.crashed(name), {
           description: t.notifications.crashedHint,
         });
+      }),
+    [queryClient],
+  );
+
+  // Internet access (playit.gg) -> cached state, plus a toast when linking ends.
+  useEffect(
+    () =>
+      events.onTunnelState((state) => {
+        const previous = queryClient.getQueryData<TunnelState>(tunnelKey);
+        queryClient.setQueryData(tunnelKey, state);
+        if (previous?.link.state === "linking") {
+          if (state.link.state === "linked") toast.success(t.tunnel.linked);
+          else if (state.linkError)
+            toast.error(t.tunnel.linkErrors[state.linkError]);
+        } else if (state.linkError === "revoked" && !previous?.linkError) {
+          toast.error(t.tunnel.linkErrors.revoked);
+        }
       }),
     [queryClient],
   );

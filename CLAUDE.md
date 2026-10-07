@@ -67,8 +67,9 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
 │   ├── components/
 │   │   ├── ui/                   # Composants shadcn/ui
 │   │   ├── layout/               # Sidebar, TitleBar, PageHeader
-│   │   └── server/               # ServerCard, Console, StatusBadge…
-│   ├── pages/                    # Home, CreateServer, ServerDetail, Settings
+│   │   ├── server/               # ServerCard, Console, StatusBadge…
+│   │   └── tunnel/               # Accès Internet (playit.gg)
+│   ├── pages/                    # Home, CreateServer, ServerDetail, Settings, Help (FAQ)
 │   ├── hooks/                    # useServers, useVersions… (TanStack Query)
 │   ├── stores/                   # Stores Zustand
 │   ├── lib/
@@ -101,6 +102,7 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
         │   ├── version.rs        # Comparaison de versions Minecraft
         │   ├── nbt.rs            # Lecture des fichiers de sauvegarde (format NBT)
         │   ├── players.rs        # Profils Mojang (pseudo -> UUID, skins)
+        │   ├── tunnel.rs         # Accès Internet : agent playit.gg intégré (5.7)
         │   ├── e2e_tests.rs      # Tests bout en bout (--ignored)
         │   └── backup.rs
         ├── events.rs             # Événements envoyés au frontend
@@ -119,6 +121,7 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
 ```
 %APPDATA%/MinyHost/
 ├── settings.json                 # Préférences globales
+├── playit.json                   # Clé et nom de l'agent playit.gg du compte lié (5.7)
 ├── java/
 │   ├── 21/                       # JRE Temurin 21
 │   └── 17/
@@ -145,7 +148,8 @@ Exemple de `instance.json` :
   "memoryMb": 4096,
   "port": 25565,
   "createdAt": "2026-10-05T12:00:00Z",
-  "pendingGameRules": { "keep_inventory": true }
+  "pendingGameRules": { "keep_inventory": true },
+  "playitTunnelId": "3f1c…"
 }
 ```
 
@@ -212,7 +216,12 @@ Les JRE sont téléchargés depuis l'API Adoptium (Temurin) et stockés dans `ja
 ### 5.7 Accès des amis (phase 3)
 - **LAN** : afficher l'IP locale + le port.
 - **Pare-feu** : proposer d'ajouter une règle Windows (demande d'élévation explicite).
-- **Internet** : intégration d'un tunnel (playit.gg ou Tailscale), après vérification de leurs conditions d'utilisation et de redistribution.
+- **Internet** : tunnel playit.gg (`core/tunnel.rs`). L'agent officiel (`playit-agent-core`, licence BSD-2-Clause) est intégré au backend : pas de programme ni de service Windows à installer, pas de droits administrateur.
+  - Chaque utilisateur lie **son propre compte** playit.gg (code de réclamation validé sur `playit.gg/claim/<code>`, agent `self-managed`). Les CGU de playit.gg (20/02/2026) interdisent de revendre ou de mettre le service à disposition de tiers : MinyHost ne fournit jamais de compte ni de tunnel partagé.
+  - Un tunnel `minecraft-java` par serveur, créé uniquement quand l'utilisateur active l'accès Internet sur la page du serveur (`playitTunnelId` dans `instance.json`), supprimé quand il le désactive ou supprime le serveur.
+  - L'agent ne tourne que si un serveur ouvert sur Internet est démarré, et ne relaie que les tunnels des serveurs démarrés, vers `127.0.0.1:<port>`.
+  - Un agent ne peut pas se supprimer lui-même (`/agents/delete` refuse la clé d'agent) : à la déconnexion, l'utilisateur le supprime sur playit.gg. MinyHost renomme son agent (`MinyHost <PC> <date>`) et affiche son nom et son identifiant dans les Paramètres pour le distinguer des anciens.
+  - Les crates sont épinglées sur un tag Git du dépôt `playit-cloud/playit-agent` (les versions crates.io sont en retard) : les mettre à jour avec les releases de l'agent.
 - Bouton « Copier l'adresse » dans tous les cas.
 
 ---
@@ -226,6 +235,7 @@ Les JRE sont téléchargés depuis l'API Adoptium (Temurin) et stockés dans `ja
 | Fabric | `https://meta.fabricmc.net/v2/` |
 | Java (Temurin) | `https://api.adoptium.net/v3/` |
 | Joueurs (UUID, skins) | `api.mojang.com`, `sessionserver.mojang.com`, `textures.minecraft.net` |
+| Tunnel Internet | `https://api.playit.gg` (via `playit-api-client`) |
 | Mods / plugins (phase 4) | `https://api.modrinth.com/v2/` |
 
 Règles :

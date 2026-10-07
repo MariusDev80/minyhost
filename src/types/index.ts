@@ -20,6 +20,8 @@ export interface Instance {
   port: number;
   /** ISO 8601, UTC. */
   createdAt: string;
+  /** playit.gg tunnel, set while Internet access is on. */
+  playitTunnelId?: string;
 }
 
 /** An instance plus its live status. Rust: `commands/servers.rs` (`ServerInfo`). */
@@ -130,6 +132,46 @@ export interface Operator extends Player {
   bypassesPlayerLimit: boolean;
 }
 
+/** Rust: `core/tunnel.rs` (`LinkState`). */
+export type LinkState =
+  | { state: "unlinked" }
+  /** Waiting for the user to approve MinyHost on this playit.gg page. */
+  | { state: "linking"; url: string }
+  | { state: "linked" };
+
+/** Rust: `core/tunnel.rs` (`LinkError`). */
+export type LinkError = "rejected" | "expired" | "revoked" | "failed";
+
+/** Rust: `core/tunnel.rs` (`AgentStatus`). */
+export type AgentStatus = "stopped" | "connecting" | "online" | "error";
+
+/** Tunnel of one server. Rust: `core/tunnel.rs` (`ServerTunnel`). */
+export interface ServerTunnel {
+  /** Address for friends, `null` until playit.gg has assigned it. */
+  address: string | null;
+  /** Disabled by playit.gg (account limits…). */
+  disabledReason: string | null;
+}
+
+/** Internet access through playit.gg. Rust: `core/tunnel.rs` (`TunnelState`). */
+export interface TunnelState {
+  link: LinkState;
+  linkError: LinkError | null;
+  agent: AgentStatus;
+  /** Messages from playit.gg (English), most important first. */
+  notices: { message: string; link: string | null }[];
+  /** By server id; a server is open to the Internet iff it has an entry. */
+  tunnels: Record<string, ServerTunnel>;
+  /** The playit.gg account email is not verified yet. */
+  emailUnverified: boolean;
+  /** playit.gg refused the agent: too many agents on the account. */
+  agentOverLimit: boolean;
+  /** Agent used by MinyHost, to tell it apart on playit.gg. */
+  agentId: string | null;
+  /** Name MinyHost gave it on playit.gg ("MinyHost <PC> <date>"). */
+  agentName: string | null;
+}
+
 /** Error returned by every command. Rust: `error.rs` (`AppError::code`). */
 export type AppErrorCode =
   | "network"
@@ -146,7 +188,12 @@ export type AppErrorCode =
   | "missingFiles"
   | "invalidInput"
   | "invalidPlayerName"
-  | "playerNotFound";
+  | "playerNotFound"
+  | "playitNotLinked"
+  | "playitLimit"
+  | "playitUnverified"
+  | "playitAgentLimit"
+  | "playit";
 
 export interface AppError {
   code: AppErrorCode;

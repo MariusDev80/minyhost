@@ -26,6 +26,15 @@ impl AppPaths {
         Self { root }
     }
 
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    /// `playit.json` — secret of the linked playit.gg agent (`core/tunnel.rs`).
+    pub fn playit_file(&self) -> PathBuf {
+        self.root.join("playit.json")
+    }
+
     /// `java/` — one folder per Java major version.
     pub fn java_dir(&self, version: u32) -> PathBuf {
         self.root.join("java").join(version.to_string())

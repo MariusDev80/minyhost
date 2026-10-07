@@ -20,6 +20,7 @@ import type {
   ServerStatusEvent,
   SettingsCatalog,
   StopOutcome,
+  TunnelState,
   WhitelistEntry,
 } from "@/types";
 
@@ -40,6 +41,10 @@ export const commands = {
   createServer: (input: NewServer) =>
     invoke<Instance>("create_server", { input }),
   deleteServer: (id: string) => invoke<void>("delete_server", { id }),
+  serversFolderPath: () => invoke<string>("servers_folder_path"),
+  /** Opens the folder in the file explorer. */
+  openServersFolder: () => invoke<void>("open_servers_folder"),
+  openServerFolder: (id: string) => invoke<void>("open_server_folder", { id }),
   startServer: (id: string) => invoke<void>("start_server", { id }),
   stopServer: (id: string) => invoke<StopOutcome>("stop_server", { id }),
   restartServer: (id: string) => invoke<StopOutcome>("restart_server", { id }),
@@ -64,6 +69,17 @@ export const commands = {
     invoke<SaveOutcome>("save_game_settings", { id, settings }),
   /** Skin PNG as a data URL (Steve when the player has no custom skin). */
   playerSkin: (uuid: string) => invoke<string>("player_skin", { uuid }),
+  getTunnelState: () => invoke<TunnelState>("get_tunnel_state"),
+  /** Returns the playit.gg page where the user approves MinyHost. */
+  linkPlayit: () => invoke<string>("link_playit"),
+  cancelPlayitLink: () => invoke<void>("cancel_playit_link"),
+  unlinkPlayit: () => invoke<void>("unlink_playit"),
+  /** Tries the agent again, e.g. after old agents were deleted on playit.gg. */
+  recheckPlayitAgent: () => invoke<void>("recheck_playit_agent"),
+  enableInternetAccess: (id: string) =>
+    invoke<void>("enable_internet_access", { id }),
+  disableInternetAccess: (id: string) =>
+    invoke<void>("disable_internet_access", { id }),
 };
 
 /** Opens a web page in the user's browser. */
@@ -101,4 +117,6 @@ export const events = {
   onCreateProgress: (handler: (e: CreateProgress) => void) =>
     subscribe("create-progress", handler),
   onAppClosing: (handler: () => void) => subscribe("app-closing", handler),
+  onTunnelState: (handler: (e: TunnelState) => void) =>
+    subscribe("tunnel-state", handler),
 };

@@ -16,6 +16,7 @@ export const fr = {
     servers: "Serveurs",
     settings: "Paramètres",
     designSystem: "Design system",
+    help: "Aide",
   },
   status: {
     starting: "Démarrage…",
@@ -108,6 +109,7 @@ export const fr = {
       "Le monde et tous les fichiers de ce serveur seront définitivement supprimés.",
     deleteConfirm: "Supprimer définitivement",
     deleted: (name: string) => `« ${name} » a été supprimé.`,
+    openFolder: "Ouvrir le dossier du serveur",
   },
   // Shared by the whitelist and operators tabs.
   players: {
@@ -495,6 +497,75 @@ export const fr = {
     crashed: (name: string) => `« ${name} » s'est arrêté de façon inattendue.`,
     crashedHint: "Regarde la console pour voir ce qui s'est passé.",
   },
+  // Internet access through playit.gg (see `core/tunnel.rs`).
+  tunnel: {
+    title: "Jouer avec des amis via Internet",
+    description:
+      "Pour que des amis qui ne sont pas chez toi rejoignent ce serveur, MinyHost utilise playit.gg, un service de tunnel gratuit. Il te faut un compte playit.gg (gratuit lui aussi).",
+    link: "Connecter playit.gg",
+    linking: "Valide la connexion dans ton navigateur…",
+    linkingHint:
+      "Connecte-toi à playit.gg (ou crée un compte). La page propose alors de réclamer un agent « self-managed » : clique sur « Continue » puis « Claim Agent ». Cet accès permet à MinyHost de créer et supprimer lui-même le tunnel de chaque serveur, rien de plus.",
+    reopen: "Rouvrir la page",
+    linked:
+      "Compte playit.gg connecté. Tu peux fermer la page playit.gg dans ton navigateur.",
+    enableHint:
+      "Ton serveur sera joignable depuis Internet. Garde la whitelist activée : seuls les joueurs autorisés pourront entrer.",
+    enable: "Ouvrir sur Internet",
+    disable: "Fermer l'accès Internet",
+    address: "Adresse à donner à tes amis",
+    copy: "Copier l'adresse",
+    copied: "Adresse copiée.",
+    pendingAddress:
+      "playit.gg prépare l'adresse de ton serveur, cela peut prendre une minute…",
+    status: {
+      stopped: "Démarre le serveur pour que tes amis puissent le rejoindre.",
+      connecting: "Connexion à playit.gg…",
+      online: "Ouvert sur Internet.",
+      error: "playit.gg est injoignable pour l'instant. Nouvel essai en cours…",
+    },
+    disabled: (reason: string) => `Désactivé par playit.gg : ${reason}`,
+    noticeLink: "En savoir plus",
+    emailUnverified: {
+      title: "Adresse e-mail playit.gg à vérifier",
+      steps:
+        "playit.gg ne l'envoie pas automatiquement : sur playit.gg, va dans les paramètres du compte > Security > Verify email. Clique ensuite sur le lien de l'e-mail reçu. Tu ne le trouves pas ? Regarde dans tes spams.",
+      open: "Ouvrir mon compte playit.gg",
+    },
+    agentLimit: {
+      title: "Trop d'agents sur ton compte playit.gg",
+      steps:
+        "Chaque connexion de MinyHost crée un agent, et un compte gratuit en accepte un nombre limité. Sur playit.gg, ouvre la liste de tes agents et supprime les anciens agents « MinyHost » : garde seulement celui indiqué dans Paramètres > Accès Internet. Clique ensuite sur « Vérifier à nouveau ».",
+      open: "Ouvrir mes agents playit.gg",
+      recheck: "Vérifier à nouveau",
+    },
+    linkErrors: {
+      rejected: "La connexion à playit.gg a été refusée.",
+      expired: "Le délai pour connecter playit.gg est dépassé. Réessaie.",
+      revoked:
+        "MinyHost n'a plus accès à ton compte playit.gg. Reconnecte-le pour rouvrir tes serveurs sur Internet.",
+      failed: "Impossible de connecter playit.gg. Réessaie.",
+    },
+    settings: {
+      title: "Accès Internet (playit.gg)",
+      unlinkedDescription:
+        "Connecte un compte playit.gg pour que des amis hors de chez toi rejoignent tes serveurs.",
+      linkedDescription:
+        "Ton compte playit.gg est connecté. Un serveur n'est ouvert sur Internet que si tu l'actives sur sa page.",
+      manage: "Gérer mon compte playit.gg",
+      unlink: "Déconnecter",
+      unlinkTitle: "Déconnecter playit.gg ?",
+      unlinkDescription:
+        "Tes serveurs ne seront plus accessibles depuis Internet et leurs adresses seront supprimées. playit.gg ne permet pas à MinyHost de supprimer son agent : supprime-le ensuite toi-même sur playit.gg (Agents), car un compte gratuit a un nombre d'agents limité.",
+      unlinked:
+        "playit.gg déconnecté. Pense à supprimer l'agent MinyHost sur playit.gg.",
+      openAgents: "Ouvrir mes agents",
+      agent: "Agent utilisé par MinyHost",
+      agentId: (id: string) => `Identifiant : ${id}`,
+      agentHint:
+        "C'est le seul agent à garder sur playit.gg : les autres agents « MinyHost » viennent d'anciennes connexions et peuvent être supprimés. Fie-toi au nom et à l'identifiant, pas à l'indicateur « en ligne », qui peut rester affiché un moment pour un ancien agent.",
+    },
+  },
   closing: {
     title: "Arrêt des serveurs…",
     description: "MinyHost sauvegarde les mondes avant de se fermer.",
@@ -523,7 +594,170 @@ export const fr = {
       "Ce pseudo n'est pas valide : 3 à 16 caractères, lettres, chiffres ou _.",
     playerNotFound:
       "Aucun compte Minecraft ne porte ce pseudo. Vérifie l'orthographe.",
+    playitNotLinked: "Connecte d'abord un compte playit.gg.",
+    playitLimit:
+      "Ton compte playit.gg gratuit ne permet pas d'ouvrir un serveur de plus. Supprime un tunnel sur playit.gg, puis réessaie.",
+    playitUnverified:
+      "L'adresse e-mail de ton compte playit.gg n'est pas vérifiée. Sur playit.gg, va dans les paramètres du compte > Security > Verify email, puis clique sur le lien de l'e-mail reçu (pense à regarder dans tes spams). Réessaie ensuite.",
+    playitAgentLimit:
+      "Ton compte playit.gg a atteint son nombre maximal d'agents. Supprime les anciens agents « MinyHost » sur playit.gg, puis réessaie.",
+    playit:
+      "playit.gg n'a pas pu traiter la demande. Vérifie ta connexion, puis réessaie.",
     unknown: "Une erreur inattendue est survenue.",
+  },
+  // Help page. Answers use "\n" for line breaks (lists, steps).
+  faq: {
+    title: "Aide",
+    description: "Les réponses aux questions les plus fréquentes.",
+    search: "Rechercher une question…",
+    noResult: "Aucune question ne correspond à ta recherche.",
+    categories: [
+      {
+        title: "Premiers pas",
+        items: [
+          {
+            q: "Qu'est-ce que MinyHost ?",
+            a: "Une application gratuite et open source qui crée et fait tourner un serveur Minecraft Java sur ton PC, en quelques clics. Tu peux y jouer depuis ce PC et, avec playit.gg, l'ouvrir à des amis qui ne sont pas chez toi.",
+          },
+          {
+            q: "Est-ce que je dois installer Java ?",
+            a: "Non. MinyHost télécharge automatiquement la bonne version de Java pour chaque serveur et la range dans son propre dossier. Le Java déjà installé sur ton PC n'est jamais utilisé ni modifié.",
+          },
+          {
+            q: "Quel type de serveur choisir ?",
+            a: "• Paper : le plus rapide, compatible avec les plugins. Le bon choix dans la plupart des cas.\n• Vanilla : le serveur officiel de Mojang, sans modification.\n• Fabric : pour jouer avec des mods. Les joueurs ont souvent besoin des mêmes mods de leur côté.\nDans tous les cas, les joueurs doivent utiliser la même version de Minecraft que le serveur.",
+          },
+          {
+            q: "Combien de mémoire (RAM) donner au serveur ?",
+            a: "3 Go suffisent pour 2 à 10 joueurs. Ton PC fait tourner le serveur et ton jeu en même temps : garde assez de mémoire pour Minecraft (au moins 4 Go libres de plus est confortable). Avec beaucoup de mods, prévois davantage.",
+          },
+          {
+            q: "Pourquoi dois-je accepter l'EULA de Minecraft ?",
+            a: "Mojang l'exige pour faire tourner un serveur. MinyHost ne l'accepte jamais à ta place : c'est la case à cocher lors de la création du serveur. Le lien « Lire l'EULA » ouvre le texte officiel.",
+          },
+        ],
+      },
+      {
+        title: "Jouer et gérer le serveur",
+        items: [
+          {
+            q: "Comment rejoindre mon serveur depuis ce PC ?",
+            a: "Démarre le serveur et attends le statut « En ligne ». Dans Minecraft : Multijoueur > Ajouter un serveur, puis entre l'adresse affichée sur la page du serveur (« Adresse (depuis ce PC) », par exemple localhost).",
+          },
+          {
+            q: "Un joueur voit « You are not white-listed on this server ». Que faire ?",
+            a: "La whitelist est activée pour protéger ton serveur : seuls les joueurs de la liste peuvent entrer. Sur la page du serveur, onglet Whitelist, ajoute son pseudo Minecraft exact. Pas besoin de redémarrer.",
+          },
+          {
+            q: "À quoi servent les opérateurs ?",
+            a: "Un opérateur peut utiliser toutes les commandes en jeu (/gamemode, /tp, /ban…) et entrer même s'il n'est pas dans la whitelist. Ajoute-toi en opérateur, et n'ajoute que des personnes de confiance.",
+          },
+          {
+            q: "Comment changer la difficulté, le mode de jeu ou les règles du jeu ?",
+            a: "Onglet Paramètres de la page du serveur. Les règles du jeu (garder l'inventaire, cycle jour/nuit…) s'appliquent tout de suite si le serveur tourne. Les réglages du monde (difficulté, PvP…) s'appliquent au prochain démarrage : un bandeau te propose alors de redémarrer.",
+          },
+          {
+            q: "Le serveur continue-t-il de tourner quand je ferme MinyHost ?",
+            a: "Non. À la fermeture, MinyHost arrête proprement chaque serveur en sauvegardant le monde. Ton serveur n'est donc accessible que tant que MinyHost est ouvert et que ton PC est allumé.",
+          },
+          {
+            q: "Le serveur s'est arrêté tout seul. Pourquoi ?",
+            a: "Ouvre l'onglet Console : les dernières lignes expliquent souvent le problème. Causes fréquentes : pas assez de mémoire, un mod ou un plugin incompatible avec la version, ou un monde abîmé. Essaie de le redémarrer ; si ça recommence, regarde le message d'erreur dans la console.",
+          },
+          {
+            q: "« Le port de ce serveur est déjà utilisé ». Que faire ?",
+            a: "Un autre programme utilise déjà ce port, souvent un autre serveur Minecraft. Arrête les autres serveurs (dans MinyHost ou ailleurs), puis relance celui-ci.",
+          },
+        ],
+      },
+      {
+        title: "Jouer avec des amis via Internet (playit.gg)",
+        items: [
+          {
+            q: "Qu'est-ce que playit.gg et pourquoi MinyHost l'utilise ?",
+            a: "playit.gg est un service gratuit de tunnel : il donne à ton serveur une adresse publique, sans configurer ta box ni ouvrir de port. MinyHost intègre l'agent officiel de playit.gg, rien d'autre à installer. Il te faut ton propre compte playit.gg (gratuit) : MinyHost ne partage jamais de compte.",
+          },
+          {
+            q: "Comment connecter mon compte playit.gg ?",
+            a: "1. Sur la page d'un serveur (ou dans Paramètres > Accès Internet), clique sur « Connecter playit.gg ».\n2. Ton navigateur s'ouvre sur playit.gg : connecte-toi ou crée un compte.\n3. La page propose de réclamer un agent « self-managed » : clique sur « Continue » puis « Claim Agent ».\n4. Quand MinyHost affiche « Compte playit.gg connecté », tu peux fermer la page playit.gg.\nLe lien expire au bout de 15 minutes : si besoin, clique sur « Rouvrir la page » ou recommence.",
+          },
+          {
+            q: "Pourquoi playit.gg demande-t-il des permissions « self-managed » ?",
+            a: "Elles permettent à MinyHost de créer et de supprimer lui-même le tunnel de chacun de tes serveurs. Cet accès est limité à l'agent de MinyHost : il ne touche à rien d'autre sur ton compte. Tu peux le retirer à tout moment (voir « Comment déconnecter playit.gg ? »).",
+          },
+          {
+            q: "On me demande de vérifier mon adresse e-mail. Comment faire ?",
+            a: "playit.gg n'envoie pas l'e-mail de vérification automatiquement. Sur playit.gg, va dans les paramètres du compte > Security > Verify email, puis clique sur le lien de l'e-mail reçu. Tu ne le trouves pas ? Regarde dans tes spams. Reviens ensuite dans MinyHost et réessaie.",
+          },
+          {
+            q: "Comment ouvrir mon serveur à mes amis ?",
+            a: "1. Sur la page du serveur, clique sur « Ouvrir sur Internet ».\n2. Attends l'adresse : playit.gg peut mettre jusqu'à une minute à la préparer.\n3. Démarre le serveur et attends le statut « Ouvert sur Internet ».\n4. Copie l'adresse (bouton à côté) et envoie-la à tes amis.\n5. De leur côté : Multijoueur > Ajouter un serveur, puis coller l'adresse.\nN'oublie pas de les ajouter à la whitelist.",
+          },
+          {
+            q: "Mes amis n'arrivent pas à se connecter. Que vérifier ?",
+            a: "• Le serveur est démarré et la carte affiche « Ouvert sur Internet ».\n• Ils utilisent exactement l'adresse affichée (copie-la avec le bouton).\n• Leur pseudo est dans la whitelist.\n• Ils ont la même version de Minecraft que le serveur (et les mêmes mods avec Fabric).\n• Pour un tunnel tout neuf, attends une minute.\n• Teste toi-même l'adresse depuis ce PC : si ça marche chez toi mais pas chez eux, le problème vient de leur côté (version, pseudo).\n• En dernier recours : redémarre le serveur, ou ferme puis rouvre l'accès Internet (l'adresse changera).",
+          },
+          {
+            q: "Comment savoir quel agent playit.gg est celui de MinyHost ?",
+            a: "Va dans Paramètres > Accès Internet : MinyHost y affiche le nom de son agent (« MinyHost <nom du PC> <date> ») et son identifiant. C'est le seul à garder. Les autres agents « MinyHost » de ta liste playit.gg viennent d'anciennes connexions. Fie-toi au nom et à l'identifiant plutôt qu'à l'indicateur « en ligne », qui peut rester allumé un moment pour un ancien agent.",
+          },
+          {
+            q: "« Trop d'agents sur ton compte playit.gg ». Que faire ?",
+            a: "Chaque nouvelle connexion de MinyHost crée un agent, et un compte gratuit en accepte un nombre limité.\n1. Clique sur « Ouvrir mes agents playit.gg ».\n2. Supprime les anciens agents « MinyHost », en gardant celui indiqué dans Paramètres > Accès Internet.\n3. Reviens dans MinyHost et clique sur « Vérifier à nouveau ».",
+          },
+          {
+            q: "Comment déconnecter playit.gg ?",
+            a: "Paramètres > Accès Internet > Déconnecter. Tes serveurs ne sont plus accessibles depuis Internet et leurs tunnels sont supprimés. playit.gg ne permet pas à MinyHost de supprimer son agent : supprime-le ensuite toi-même dans ta liste d'agents sur playit.gg.",
+          },
+          {
+            q: "L'adresse de mon serveur va-t-elle changer ?",
+            a: "Non, tant que l'accès Internet reste ouvert. Elle change si tu fermes puis rouvres l'accès Internet, ou si tu reconnectes un compte playit.gg (un nouveau tunnel est créé).",
+          },
+          {
+            q: "Est-ce que c'est sûr d'ouvrir mon serveur sur Internet ?",
+            a: "MinyHost garde la whitelist et la vérification des comptes Minecraft activées : seuls les joueurs que tu as ajoutés peuvent entrer. Seuls les serveurs démarrés et ouverts sur Internet sont joignables, et rien d'autre sur ton PC n'est exposé. Évite quand même de publier l'adresse, et ferme l'accès Internet quand tu ne t'en sers plus.",
+          },
+          {
+            q: "Faut-il payer playit.gg ?",
+            a: "Non : l'offre gratuite suffit pour jouer entre amis avec MinyHost. playit Premium n'est utile que pour des options avancées (adresse personnalisée, régions…).",
+          },
+          {
+            q: "Mes amis jouent sur mobile ou console (Bedrock). Peuvent-ils rejoindre ?",
+            a: "Non : MinyHost crée des serveurs Minecraft Java Edition. Les joueurs doivent utiliser Minecraft Java sur ordinateur.",
+          },
+        ],
+      },
+      {
+        title: "Fichiers et sauvegardes",
+        items: [
+          {
+            q: "Où sont les fichiers de mes serveurs ?",
+            a: "Dans le dossier %APPDATA%\\MinyHost\\servers, un dossier par serveur (monde, réglages, journaux). Le bouton dossier de la page d'un serveur l'ouvre directement, et Paramètres > Fichiers ouvre le dossier de tous les serveurs.",
+          },
+          {
+            q: "Comment sauvegarder mon monde ?",
+            a: "Les sauvegardes automatiques arriveront dans une prochaine version. En attendant : arrête le serveur, ouvre son dossier, puis copie-le ailleurs (il contient le monde et tous les réglages).",
+          },
+          {
+            q: "Que se passe-t-il quand je supprime un serveur ?",
+            a: "Son dossier est supprimé définitivement, monde compris, ainsi que son tunnel playit.gg s'il était ouvert sur Internet. Fais une copie du dossier avant si tu veux garder le monde.",
+          },
+        ],
+      },
+      {
+        title: "Application",
+        items: [
+          {
+            q: "Comment changer la langue ou le thème ?",
+            a: "Dans Paramètres > Apparence. Par défaut, MinyHost suit la langue de Windows.",
+          },
+          {
+            q: "J'ai trouvé un bug ou j'ai une idée. Où le signaler ?",
+            a: "Sur la page GitHub du projet (github.com/MariusDev80/minyhost), onglet Issues. Décris ce que tu faisais et, si possible, copie les dernières lignes de la console du serveur.",
+          },
+        ],
+      },
+    ],
   },
   settings: {
     title: "Paramètres",
@@ -539,5 +773,9 @@ export const fr = {
     language: "Langue",
     languageDescription: "Langue de l'interface de MinyHost.",
     languageSystem: (name: string) => `Système (${name})`,
+    files: "Fichiers",
+    filesDescription:
+      "Chaque serveur (monde, réglages, journaux) est rangé dans son propre dossier, sur ce PC.",
+    openServersFolder: "Ouvrir le dossier des serveurs",
   },
 } as const;

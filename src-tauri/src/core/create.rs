@@ -78,6 +78,7 @@ pub async fn create_server(
         port: instances::free_port(&taken_ports),
         created_at: instances::now_iso8601(),
         pending_game_rules: BTreeMap::new(),
+        playit_tunnel_id: None,
     };
 
     let dir = paths.server_dir(&instance.id);

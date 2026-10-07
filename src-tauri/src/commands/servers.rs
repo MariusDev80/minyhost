@@ -67,6 +67,10 @@ pub async fn delete_server(state: State<'_, AppState>, id: String) -> AppResult<
     if state.processes.status(&id).await != ServerStatus::Stopped {
         return Err(AppError::AlreadyRunning);
     }
+    // Best effort: the server goes away even if playit.gg cannot be reached.
+    if let Err(err) = state.tunnels.disable(&id).await {
+        eprintln!("failed to remove the tunnel of {id}: {err}");
+    }
     // Deleting a world can take a while: run it off the async threads.
     let paths = state.paths.clone();
     tokio::task::spawn_blocking(move || instances::delete(&paths, &id))

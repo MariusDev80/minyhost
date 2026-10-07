@@ -13,6 +13,7 @@ pub mod players;
 pub mod process;
 pub mod properties;
 pub mod providers;
+pub mod tunnel;
 pub mod version;
 pub mod whitelist;
 

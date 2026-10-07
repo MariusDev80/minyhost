@@ -473,6 +473,7 @@ mod tests {
             port: 25565,
             created_at: String::new(),
             pending_game_rules: BTreeMap::new(),
+            playit_tunnel_id: None,
         }
     }
 

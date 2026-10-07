@@ -7,6 +7,7 @@ import { useApplyLocale } from "@/hooks/useLocale";
 import { useApplyTheme } from "@/hooks/useTheme";
 import { CreateServerPage } from "@/pages/CreateServer";
 import { DesignSystemPage } from "@/pages/DesignSystem";
+import { HelpPage } from "@/pages/Help";
 import { HomePage } from "@/pages/Home";
 import { ServerDetailPage } from "@/pages/ServerDetail";
 import { ServersPage } from "@/pages/Servers";
@@ -28,6 +29,8 @@ function CurrentPage({ route }: { route: Route }) {
       return <ServerDetailPage key={route.id} id={route.id} />;
     case "settings":
       return <SettingsPage />;
+    case "help":
+      return <HelpPage />;
     case "design-system":
       return <DesignSystemPage />;
   }

@@ -8,12 +8,14 @@ use tauri::{AppHandle, Emitter};
 
 use crate::core::create::CreateProgress;
 use crate::core::process::{ConsoleStream, ServerEvent, ServerStatus};
+use crate::core::tunnel::TunnelState;
 
 pub const CONSOLE_LINE: &str = "console-line";
 pub const SERVER_STATUS: &str = "server-status";
 pub const SERVER_CRASHED: &str = "server-crashed";
 pub const CREATE_PROGRESS: &str = "create-progress";
 pub const APP_CLOSING: &str = "app-closing";
+pub const TUNNEL_STATE: &str = "tunnel-state";
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -59,6 +61,10 @@ pub fn emit_create_progress(app: &AppHandle, progress: CreateProgress) {
 
 pub fn emit_app_closing(app: &AppHandle) {
     log_emit_error(app.emit(APP_CLOSING, ()));
+}
+
+pub fn emit_tunnel_state(app: &AppHandle, state: TunnelState) {
+    log_emit_error(app.emit(TUNNEL_STATE, state));
 }
 
 fn log_emit_error(result: tauri::Result<()>) {

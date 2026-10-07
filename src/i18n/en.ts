@@ -17,6 +17,7 @@ export const en: Messages = {
     servers: "Servers",
     settings: "Settings",
     designSystem: "Design system",
+    help: "Help",
   },
   status: {
     starting: "Starting…",
@@ -109,6 +110,7 @@ export const en: Messages = {
       "The world and all the files of this server will be permanently deleted.",
     deleteConfirm: "Delete permanently",
     deleted: (name: string) => `“${name}” has been deleted.`,
+    openFolder: "Open the server folder",
   },
   players: {
     placeholder: "Minecraft username",
@@ -474,6 +476,74 @@ export const en: Messages = {
     crashed: (name: string) => `“${name}” stopped unexpectedly.`,
     crashedHint: "Check the console to see what happened.",
   },
+  tunnel: {
+    title: "Play with friends over the Internet",
+    description:
+      "So that friends who aren't at your place can join this server, MinyHost uses playit.gg, a free tunnel service. You need a playit.gg account (free too).",
+    link: "Link playit.gg",
+    linking: "Confirm the link in your browser…",
+    linkingHint:
+      "Log in to playit.gg (or create an account). The page then offers to claim a “self-managed” agent: click “Continue”, then “Claim Agent”. This access lets MinyHost create and delete the tunnel of each server by itself, nothing more.",
+    reopen: "Open the page again",
+    linked:
+      "playit.gg account linked. You can close the playit.gg page in your browser.",
+    enableHint:
+      "Your server will be reachable from the Internet. Keep the whitelist on: only allowed players can join.",
+    enable: "Open to the Internet",
+    disable: "Close Internet access",
+    address: "Address to give your friends",
+    copy: "Copy the address",
+    copied: "Address copied.",
+    pendingAddress:
+      "playit.gg is preparing your server's address, this can take a minute…",
+    status: {
+      stopped: "Start the server so that your friends can join it.",
+      connecting: "Connecting to playit.gg…",
+      online: "Open to the Internet.",
+      error: "playit.gg can't be reached right now. Retrying…",
+    },
+    disabled: (reason: string) => `Disabled by playit.gg: ${reason}`,
+    noticeLink: "Learn more",
+    emailUnverified: {
+      title: "playit.gg email address to verify",
+      steps:
+        "playit.gg doesn't send it automatically: on playit.gg, go to the account settings > Security > Verify email. Then click the link in the email you receive. Can't find it? Check your spam folder.",
+      open: "Open my playit.gg account",
+    },
+    agentLimit: {
+      title: "Too many agents on your playit.gg account",
+      steps:
+        "Each MinyHost link creates an agent, and a free account only accepts a limited number. On playit.gg, open your agent list and delete the old “MinyHost” agents: only keep the one shown in Settings > Internet access. Then click “Check again”.",
+      open: "Open my playit.gg agents",
+      recheck: "Check again",
+    },
+    linkErrors: {
+      rejected: "The link to playit.gg was rejected.",
+      expired: "The time to link playit.gg ran out. Try again.",
+      revoked:
+        "MinyHost no longer has access to your playit.gg account. Link it again to reopen your servers to the Internet.",
+      failed: "Couldn't link playit.gg. Try again.",
+    },
+    settings: {
+      title: "Internet access (playit.gg)",
+      unlinkedDescription:
+        "Link a playit.gg account so that friends away from home can join your servers.",
+      linkedDescription:
+        "Your playit.gg account is linked. A server is only open to the Internet if you turn it on from its page.",
+      manage: "Manage my playit.gg account",
+      unlink: "Unlink",
+      unlinkTitle: "Unlink playit.gg?",
+      unlinkDescription:
+        "Your servers will no longer be reachable from the Internet and their addresses will be deleted. playit.gg doesn't let MinyHost delete its agent: delete it yourself on playit.gg afterwards (Agents), as a free account has a limited number of agents.",
+      unlinked:
+        "playit.gg unlinked. Remember to delete the MinyHost agent on playit.gg.",
+      openAgents: "Open my agents",
+      agent: "Agent used by MinyHost",
+      agentId: (id: string) => `ID: ${id}`,
+      agentHint:
+        "It's the only agent to keep on playit.gg: the other “MinyHost” agents come from older links and can be deleted. Rely on the name and the ID, not on the “online” indicator, which may stay on for a while for an old agent.",
+    },
+  },
   closing: {
     title: "Stopping the servers…",
     description: "MinyHost is saving the worlds before closing.",
@@ -498,7 +568,169 @@ export const en: Messages = {
       "This username isn't valid: 3 to 16 characters, letters, digits or _.",
     playerNotFound:
       "No Minecraft account has this username. Check the spelling.",
+    playitNotLinked: "Link a playit.gg account first.",
+    playitLimit:
+      "Your free playit.gg account can't open one more server. Delete a tunnel on playit.gg, then try again.",
+    playitUnverified:
+      "The email address of your playit.gg account isn't verified. On playit.gg, go to the account settings > Security > Verify email, then click the link in the email you receive (check your spam folder). Try again afterwards.",
+    playitAgentLimit:
+      "Your playit.gg account has reached its maximum number of agents. Delete the old “MinyHost” agents on playit.gg, then try again.",
+    playit:
+      "playit.gg couldn't handle the request. Check your connection, then try again.",
     unknown: "An unexpected error occurred.",
+  },
+  faq: {
+    title: "Help",
+    description: "Answers to the most common questions.",
+    search: "Search a question…",
+    noResult: "No question matches your search.",
+    categories: [
+      {
+        title: "Getting started",
+        items: [
+          {
+            q: "What is MinyHost?",
+            a: "A free and open source app that creates and runs a Minecraft Java server on your PC, in a few clicks. You can play on it from this PC and, with playit.gg, open it to friends who aren't at your place.",
+          },
+          {
+            q: "Do I need to install Java?",
+            a: "No. MinyHost automatically downloads the right Java version for each server and keeps it in its own folder. The Java already installed on your PC is never used or changed.",
+          },
+          {
+            q: "Which server type should I pick?",
+            a: "• Paper: the fastest, supports plugins. The right choice in most cases.\n• Vanilla: Mojang's official server, unmodified.\n• Fabric: to play with mods. Players often need the same mods on their side.\nIn every case, players must use the same Minecraft version as the server.",
+          },
+          {
+            q: "How much memory (RAM) should the server get?",
+            a: "3 GB is enough for 2 to 10 players. Your PC runs the server and your game at the same time: keep enough memory for Minecraft (at least 4 more free GB is comfortable). With many mods, plan more.",
+          },
+          {
+            q: "Why do I have to accept the Minecraft EULA?",
+            a: "Mojang requires it to run a server. MinyHost never accepts it for you: it's the checkbox when you create the server. The “Read the EULA” link opens the official text.",
+          },
+        ],
+      },
+      {
+        title: "Playing and managing the server",
+        items: [
+          {
+            q: "How do I join my server from this PC?",
+            a: "Start the server and wait for the “Online” status. In Minecraft: Multiplayer > Add Server, then enter the address shown on the server page (“Address (from this PC)”, for example localhost).",
+          },
+          {
+            q: "A player sees “You are not white-listed on this server”. What should I do?",
+            a: "The whitelist is on to protect your server: only players on the list can join. On the server page, Whitelist tab, add their exact Minecraft username. No restart needed.",
+          },
+          {
+            q: "What are operators for?",
+            a: "An operator can use every command in game (/gamemode, /tp, /ban…) and join even when not on the whitelist. Add yourself as an operator, and only add people you trust.",
+          },
+          {
+            q: "How do I change the difficulty, the game mode or the game rules?",
+            a: "Settings tab of the server page. Game rules (keep inventory, day/night cycle…) apply right away if the server is running. World settings (difficulty, PvP…) apply on the next start: a banner then offers to restart.",
+          },
+          {
+            q: "Does the server keep running when I close MinyHost?",
+            a: "No. When closing, MinyHost stops each server cleanly and saves the world. Your server is only reachable while MinyHost is open and your PC is on.",
+          },
+          {
+            q: "The server stopped by itself. Why?",
+            a: "Open the Console tab: the last lines often explain the problem. Common causes: not enough memory, a mod or plugin that doesn't match the version, or a damaged world. Try starting it again; if it happens again, look at the error message in the console.",
+          },
+          {
+            q: "“This server's port is already in use”. What should I do?",
+            a: "Another program already uses this port, often another Minecraft server. Stop the other servers (in MinyHost or elsewhere), then start this one again.",
+          },
+        ],
+      },
+      {
+        title: "Playing with friends over the Internet (playit.gg)",
+        items: [
+          {
+            q: "What is playit.gg and why does MinyHost use it?",
+            a: "playit.gg is a free tunnel service: it gives your server a public address, without setting up your router or opening a port. MinyHost embeds the official playit.gg agent, nothing else to install. You need your own playit.gg account (free): MinyHost never shares an account.",
+          },
+          {
+            q: "How do I link my playit.gg account?",
+            a: "1. On a server page (or in Settings > Internet access), click “Link playit.gg”.\n2. Your browser opens playit.gg: log in or create an account.\n3. The page offers to claim a “self-managed” agent: click “Continue”, then “Claim Agent”.\n4. When MinyHost shows “playit.gg account linked”, you can close the playit.gg page.\nThe link expires after 15 minutes: if needed, click “Open the page again” or start over.",
+          },
+          {
+            q: "Why does playit.gg ask for “self-managed” permissions?",
+            a: "They let MinyHost create and delete the tunnel of each of your servers by itself. This access is limited to MinyHost's agent: it doesn't touch anything else on your account. You can remove it at any time (see “How do I unlink playit.gg?”).",
+          },
+          {
+            q: "I'm asked to verify my email address. How?",
+            a: "playit.gg doesn't send the verification email automatically. On playit.gg, go to the account settings > Security > Verify email, then click the link in the email you receive. Can't find it? Check your spam folder. Then come back to MinyHost and try again.",
+          },
+          {
+            q: "How do I open my server to my friends?",
+            a: "1. On the server page, click “Open to the Internet”.\n2. Wait for the address: playit.gg can take up to a minute to prepare it.\n3. Start the server and wait for the “Open to the Internet” status.\n4. Copy the address (button next to it) and send it to your friends.\n5. On their side: Multiplayer > Add Server, then paste the address.\nRemember to add them to the whitelist.",
+          },
+          {
+            q: "My friends can't connect. What should I check?",
+            a: "• The server is started and the card shows “Open to the Internet”.\n• They use exactly the address shown (copy it with the button).\n• Their username is on the whitelist.\n• They have the same Minecraft version as the server (and the same mods with Fabric).\n• For a brand new tunnel, wait a minute.\n• Try the address yourself from this PC: if it works for you but not for them, the problem is on their side (version, username).\n• As a last resort: restart the server, or close then reopen Internet access (the address will change).",
+          },
+          {
+            q: "How do I know which playit.gg agent is MinyHost's?",
+            a: "Go to Settings > Internet access: MinyHost shows its agent's name (“MinyHost <PC name> <date>”) and ID there. It's the only one to keep. The other “MinyHost” agents in your playit.gg list come from older links. Rely on the name and the ID rather than on the “online” indicator, which may stay on for a while for an old agent.",
+          },
+          {
+            q: "“Too many agents on your playit.gg account”. What should I do?",
+            a: "Each new MinyHost link creates an agent, and a free account only accepts a limited number.\n1. Click “Open my playit.gg agents”.\n2. Delete the old “MinyHost” agents, keeping the one shown in Settings > Internet access.\n3. Come back to MinyHost and click “Check again”.",
+          },
+          {
+            q: "How do I unlink playit.gg?",
+            a: "Settings > Internet access > Unlink. Your servers are no longer reachable from the Internet and their tunnels are deleted. playit.gg doesn't let MinyHost delete its agent: delete it yourself afterwards in your agent list on playit.gg.",
+          },
+          {
+            q: "Will my server's address change?",
+            a: "No, as long as Internet access stays open. It changes if you close then reopen Internet access, or if you link a playit.gg account again (a new tunnel is created).",
+          },
+          {
+            q: "Is it safe to open my server to the Internet?",
+            a: "MinyHost keeps the whitelist and Minecraft account checks on: only the players you added can join. Only servers that are started and open to the Internet are reachable, and nothing else on your PC is exposed. Still, avoid posting the address publicly, and close Internet access when you don't use it.",
+          },
+          {
+            q: "Do I have to pay for playit.gg?",
+            a: "No: the free plan is enough to play with friends with MinyHost. playit Premium is only useful for advanced options (custom address, regions…).",
+          },
+          {
+            q: "My friends play on mobile or console (Bedrock). Can they join?",
+            a: "No: MinyHost creates Minecraft Java Edition servers. Players must use Minecraft Java on a computer.",
+          },
+        ],
+      },
+      {
+        title: "Files and backups",
+        items: [
+          {
+            q: "Where are my servers' files?",
+            a: "In the %APPDATA%\\MinyHost\\servers folder, one folder per server (world, settings, logs). The folder button on a server page opens it directly, and Settings > Files opens the folder of all servers.",
+          },
+          {
+            q: "How do I back up my world?",
+            a: "Automatic backups will come in a future version. Meanwhile: stop the server, open its folder, then copy it somewhere else (it holds the world and all the settings).",
+          },
+          {
+            q: "What happens when I delete a server?",
+            a: "Its folder is permanently deleted, world included, along with its playit.gg tunnel if it was open to the Internet. Copy the folder first if you want to keep the world.",
+          },
+        ],
+      },
+      {
+        title: "App",
+        items: [
+          {
+            q: "How do I change the language or the theme?",
+            a: "In Settings > Appearance. By default, MinyHost follows the Windows language.",
+          },
+          {
+            q: "I found a bug or have an idea. Where do I report it?",
+            a: "On the project's GitHub page (github.com/MariusDev80/minyhost), Issues tab. Describe what you were doing and, if possible, copy the last lines of the server console.",
+          },
+        ],
+      },
+    ],
   },
   settings: {
     title: "Settings",
@@ -514,5 +746,9 @@ export const en: Messages = {
     language: "Language",
     languageDescription: "Language of the MinyHost interface.",
     languageSystem: (name: string) => `System (${name})`,
+    files: "Files",
+    filesDescription:
+      "Each server (world, settings, logs) is stored in its own folder, on this PC.",
+    openServersFolder: "Open the servers folder",
   },
 };

@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   Crown,
+  FolderOpen,
   ServerOff,
   Settings2,
   Terminal,
@@ -17,6 +18,7 @@ import { loaderInfo } from "@/components/server/loaders";
 import { ServerControls } from "@/components/server/ServerControls";
 import { StatusBadge } from "@/components/server/StatusBadge";
 import { WhitelistPanel } from "@/components/server/WhitelistPanel";
+import { InternetAccessCard } from "@/components/tunnel/InternetAccessCard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +27,8 @@ import { useOperators } from "@/hooks/useOperators";
 import { useServer } from "@/hooks/useServers";
 import { useWhitelist } from "@/hooks/useWhitelist";
 import { t } from "@/i18n";
+import { showError } from "@/lib/errors";
+import { commands } from "@/lib/tauri";
 import { useUiStore } from "@/stores/ui";
 import type { ServerInfo } from "@/types";
 
@@ -70,6 +74,17 @@ function ServerDetail({ server }: { server: ServerInfo }) {
         actions={
           <>
             <StatusBadge status={server.status} className="self-center" />
+            <Button
+              variant="ghost"
+              size="icon-lg"
+              aria-label={t.server.openFolder}
+              title={t.server.openFolder}
+              onClick={() =>
+                commands.openServerFolder(server.id).catch(showError)
+              }
+            >
+              <FolderOpen />
+            </Button>
             <DeleteServerDialog server={server} />
             <ServerControls server={server} size="lg" />
           </>
@@ -87,6 +102,8 @@ function ServerDetail({ server }: { server: ServerInfo }) {
       </div>
 
       <RestartBanner server={server} />
+
+      <InternetAccessCard server={server} />
 
       <Tabs defaultValue="console">
         <TabsList>

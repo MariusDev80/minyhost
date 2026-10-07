@@ -1,11 +1,12 @@
 //! Common error type, converted into a user-readable message for the frontend.
 //!
 //! Each variant is sent to the frontend as `{ code, detail }`:
-//! - `code` selects the French message in `src/i18n/fr.ts` (`errors.<code>`),
+//! - `code` selects the translated message in `src/i18n/` (`errors.<code>`),
 //! - `detail` is the technical message, useful for logs and bug reports.
 //!
 //! To add an error: add a variant here, give it a code in `AppError::code`,
-//! then add the matching text in `fr.ts` and the code in `src/types/index.ts`.
+//! then add the matching text in each locale of `src/i18n/` and the code in
+//! `src/types/index.ts`.
 
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
@@ -64,6 +65,21 @@ pub enum AppError {
 
     #[error("no Minecraft account named {0}")]
     PlayerNotFound(String),
+
+    #[error("no playit.gg account linked")]
+    PlayitNotLinked,
+
+    #[error("the free playit.gg plan does not allow this tunnel")]
+    PlayitLimit,
+
+    #[error("the playit.gg account email is not verified")]
+    PlayitUnverified,
+
+    #[error("the playit.gg account has reached its maximum number of agents")]
+    PlayitAgentLimit,
+
+    #[error("playit.gg error: {0}")]
+    Playit(String),
 }
 
 impl AppError {
@@ -87,6 +103,11 @@ impl AppError {
             Self::InvalidInput(_) => "invalidInput",
             Self::InvalidPlayerName(_) => "invalidPlayerName",
             Self::PlayerNotFound(_) => "playerNotFound",
+            Self::PlayitNotLinked => "playitNotLinked",
+            Self::PlayitLimit => "playitLimit",
+            Self::PlayitUnverified => "playitUnverified",
+            Self::PlayitAgentLimit => "playitAgentLimit",
+            Self::Playit(_) => "playit",
         }
     }
 }

@@ -230,3 +230,32 @@ async fn game_rules_follow_the_world() {
         && l.ends_with("true")));
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+/// Starts linking a playit.gg account: the claim code must be accepted by the
+/// API and wait for the user. No account is needed (nobody approves it).
+#[tokio::test]
+#[ignore = "calls the playit.gg API"]
+async fn playit_link_starts() {
+    use crate::core::tunnel::{LinkState, TunnelManager};
+
+    let root = std::env::temp_dir().join(format!("minyhost-e2e-playit-{}", uuid::Uuid::new_v4()));
+    let paths = AppPaths::new(root.clone());
+    let states = Arc::new(Mutex::new(Vec::new()));
+    let sink_states = states.clone();
+    let tunnels = TunnelManager::new(
+        paths,
+        Arc::new(move |state| sink_states.lock().unwrap().push(state)),
+    );
+
+    let url = tunnels.start_link().await.unwrap();
+    assert!(url.starts_with("https://playit.gg/claim/"), "{url}");
+    // A few polls against the real API: still waiting, no error.
+    tokio::time::sleep(Duration::from_secs(6)).await;
+    let state = tunnels.state().await;
+    assert_eq!(state.link, LinkState::Linking { url });
+    assert_eq!(state.link_error, None);
+
+    tunnels.cancel_link().await;
+    assert_eq!(tunnels.state().await.link, LinkState::Unlinked);
+    let _ = std::fs::remove_dir_all(root);
+}

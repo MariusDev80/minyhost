@@ -45,6 +45,10 @@ pub struct Instance {
         skip_serializing_if = "BTreeMap::is_empty"
     )]
     pub pending_game_rules: BTreeMap<String, SettingValue>,
+    /// playit.gg tunnel of this server, set while Internet access is on
+    /// (`core/tunnel.rs`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub playit_tunnel_id: Option<uuid::Uuid>,
 }
 
 /// All instances, newest first.

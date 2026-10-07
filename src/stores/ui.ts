@@ -15,6 +15,7 @@ export type Route =
   | { name: "create-server" }
   | { name: "server"; id: string }
   | { name: "settings" }
+  | { name: "help" }
   | { name: "design-system" };
 
 interface UiState {
