@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useServerEvents } from "@/hooks/useServerEvents";
+import { useApplyLocale } from "@/hooks/useLocale";
 import { useApplyTheme } from "@/hooks/useTheme";
 import { CreateServerPage } from "@/pages/CreateServer";
 import { DesignSystemPage } from "@/pages/DesignSystem";
@@ -40,12 +41,15 @@ function EventListeners() {
 
 function App() {
   const theme = useApplyTheme();
+  const locale = useApplyLocale();
   const route = useUiStore((state) => state.route);
 
   return (
     <QueryClientProvider client={queryClient}>
       <EventListeners />
-      <TooltipProvider>
+      {/* `key` remounts the UI on a language change, so every text (memoized
+          or not) is read again from the new locale. Data and stores are kept. */}
+      <TooltipProvider key={locale}>
         <AppLayout>
           <CurrentPage route={route} />
         </AppLayout>

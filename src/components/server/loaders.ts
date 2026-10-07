@@ -2,18 +2,27 @@ import { Pickaxe, Puzzle, Zap, type LucideIcon } from "lucide-react";
 import { t } from "@/i18n";
 import type { Loader } from "@/types";
 
-/** Display info for each server type, in the order shown in the UI. */
-export const loaders: {
+const icons: Record<Loader, LucideIcon> = {
+  paper: Zap,
+  vanilla: Pickaxe,
+  fabric: Puzzle,
+};
+
+/** Order in which server types are shown in the UI. */
+const order: Loader[] = ["paper", "vanilla", "fabric"];
+
+/** Display info for a server type. Texts are read at call time (current locale). */
+export function loaderInfo(loader: Loader): {
   value: Loader;
   icon: LucideIcon;
   name: string;
   description: string;
-}[] = [
-  { value: "paper", icon: Zap, ...t.loaders.paper },
-  { value: "vanilla", icon: Pickaxe, ...t.loaders.vanilla },
-  { value: "fabric", icon: Puzzle, ...t.loaders.fabric },
-];
+} {
+  const value = loader in icons ? loader : order[0];
+  return { value, icon: icons[value], ...t.loaders[value] };
+}
 
-export function loaderInfo(loader: Loader) {
-  return loaders.find((l) => l.value === loader) ?? loaders[0];
+/** Every server type, in display order. */
+export function loaderList() {
+  return order.map(loaderInfo);
 }

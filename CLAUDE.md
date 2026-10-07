@@ -76,7 +76,7 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
 │   │   ├── errors.ts             # Erreur Rust -> message lisible (i18n)
 │   │   ├── skin.ts               # Lecture d'un skin (tête du joueur)
 │   │   └── utils.ts
-│   ├── i18n/fr.ts                # Tous les textes de l'interface
+│   ├── i18n/                     # Textes de l'interface : fr.ts (référence), en.ts…
 │   └── types/                    # Types partagés avec Rust
 └── src-tauri/                    # Backend Rust
     ├── Cargo.toml

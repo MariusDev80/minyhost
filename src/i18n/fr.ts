@@ -1,5 +1,5 @@
-// French UI strings. Every user-facing text lives here so the app can be
-// translated later without touching components.
+// French UI strings: the reference locale. Every user-facing text lives here;
+// other locales (`en.ts`…) must provide the same keys.
 export const fr = {
   app: {
     name: "MinyHost",
@@ -536,5 +536,8 @@ export const fr = {
       light: "Clair",
       system: "Système",
     },
+    language: "Langue",
+    languageDescription: "Langue de l'interface de MinyHost.",
+    languageSystem: (name: string) => `Système (${name})`,
   },
 } as const;

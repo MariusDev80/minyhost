@@ -12,33 +12,38 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-const mainItems: NavItem[] = [
-  { route: "home", label: t.nav.home, icon: Home },
-  { route: "servers", label: t.nav.servers, icon: Server },
-];
+// Built at render time so the labels follow the current locale.
+function mainItems(): NavItem[] {
+  return [
+    { route: "home", label: t.nav.home, icon: Home },
+    { route: "servers", label: t.nav.servers, icon: Server },
+  ];
+}
 
-const bottomItems: NavItem[] = [
-  // Dev-only showcase of the design system components.
-  ...(import.meta.env.DEV
-    ? [
-        {
-          route: "design-system" as const,
-          label: t.nav.designSystem,
-          icon: Palette,
-        },
-      ]
-    : []),
-  { route: "settings", label: t.nav.settings, icon: Settings },
-];
+function bottomItems(): NavItem[] {
+  return [
+    // Dev-only showcase of the design system components.
+    ...(import.meta.env.DEV
+      ? [
+          {
+            route: "design-system" as const,
+            label: t.nav.designSystem,
+            icon: Palette,
+          },
+        ]
+      : []),
+    { route: "settings", label: t.nav.settings, icon: Settings },
+  ];
+}
 
 export function Sidebar() {
   return (
     <nav className="flex w-56 shrink-0 flex-col gap-1 border-r border-sidebar-border bg-sidebar p-3">
-      {mainItems.map((item) => (
+      {mainItems().map((item) => (
         <SidebarLink key={item.route} item={item} />
       ))}
       <div className="flex-1" />
-      {bottomItems.map((item) => (
+      {bottomItems().map((item) => (
         <SidebarLink key={item.route} item={item} />
       ))}
       <p className="px-3 pt-2 text-xs text-muted-foreground">

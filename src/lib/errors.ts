@@ -1,5 +1,5 @@
 // Turns any error (from Rust or elsewhere) into a message a non-technical
-// user can understand. The texts live in `i18n/fr.ts` (`errors`).
+// user can understand. The texts live in the `errors` section of `i18n/`.
 import { toast } from "sonner";
 import { t } from "@/i18n";
 import type { AppError } from "@/types";

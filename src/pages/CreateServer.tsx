@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CreationProgress } from "@/components/server/CreationProgress";
-import { loaders } from "@/components/server/loaders";
+import { loaderList } from "@/components/server/loaders";
 import { GameSettingsForm } from "@/components/server/settings/GameSettingsForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -164,7 +164,7 @@ function CreateServerForm({
               aria-label={t.create.type}
               className="grid grid-cols-3 gap-2"
             >
-              {loaders.map(({ value, icon: Icon, name, description }) => (
+              {loaderList().map(({ value, icon: Icon, name, description }) => (
                 <button
                   key={value}
                   type="button"

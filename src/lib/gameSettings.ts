@@ -85,7 +85,7 @@ export function hasChanges(changes: GameSettings): boolean {
   );
 }
 
-/** French label and description, or the technical name if there is none. */
+/** Translated label and description, or the technical name if there is none. */
 export function settingText(key: string): {
   label: string;
   description?: string;
