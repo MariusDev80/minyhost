@@ -34,6 +34,7 @@ export const fr = {
     edit: "Modifier",
     send: "Envoyer",
     restart: "Redémarrer",
+    close: "Fermer",
   },
   loaders: {
     vanilla: {
@@ -59,6 +60,8 @@ export const fr = {
   },
   units: {
     memory: (mb: number) => `${mb / 1024} Go`,
+    downloads: (count: number) =>
+      `${new Intl.NumberFormat("fr", { notation: "compact", maximumFractionDigits: 1 }).format(count)} téléchargements`,
   },
   home: {
     title: "Bienvenue",
@@ -580,6 +583,74 @@ export const fr = {
     description: "MinyHost sauvegarde les mondes avant de se fermer.",
   },
   // One message per `AppErrorCode` (see `src/types/index.ts`).
+  content: {
+    tab: "Contenu",
+    title: {
+      vanilla: "Datapacks",
+      paper: "Plugins et datapacks",
+      fabric: "Mods et datapacks",
+      neoforge: "Mods et datapacks",
+      forge: "Mods et datapacks",
+    },
+    description: {
+      vanilla:
+        "Les datapacks ajoutent des recettes, des mécaniques ou des structures. Les joueurs n'ont rien à installer.",
+      paper:
+        "Les plugins ajoutent des fonctionnalités au serveur. Les joueurs n'ont rien à installer.",
+      fabric:
+        "Les mods changent le jeu. Les joueurs doivent souvent installer les mêmes de leur côté.",
+      neoforge:
+        "Les mods changent le jeu. Les joueurs doivent souvent installer les mêmes de leur côté.",
+      forge:
+        "Les mods changent le jeu. Les joueurs doivent souvent installer les mêmes de leur côté.",
+    },
+    kinds: {
+      mod: "Mods",
+      plugin: "Plugins",
+      datapack: "Datapacks",
+      modpack: "Modpacks",
+    },
+    /** Folder of the server where each kind goes. */
+    folders: {
+      mod: "mods",
+      plugin: "plugins",
+      datapack: "world/datapacks",
+      modpack: "",
+    },
+    sources: {
+      modrinth: "Modrinth",
+      curseforge: "CurseForge",
+    },
+    add: "Ajouter",
+    addTitle: "Ajouter du contenu",
+    compatibleHint: (server: string) =>
+      `Seul le contenu compatible avec ${server} est affiché.`,
+    stopFirst:
+      "Arrête le serveur pour ajouter, désactiver ou supprimer du contenu.",
+    empty: "Rien d'installé pour l'instant.",
+    dependency: "Dépendance",
+    manual: "Ajouté à la main",
+    enable: (name: string) => `Activer « ${name} »`,
+    remove: (name: string) => `Supprimer « ${name} »`,
+    openPage: "Voir la page",
+    searchPlaceholder: (kind: string) =>
+      `Rechercher des ${kind.toLowerCase()}…`,
+    by: (author: string) => `par ${author}`,
+    noResults: "Aucun résultat compatible.",
+    searchError: "Impossible de charger les résultats. Vérifie ta connexion.",
+    loadMore: "Afficher plus",
+    install: "Installer",
+    update: "Mettre à jour",
+    installed: (name: string, dependencies: number) =>
+      dependencies === 0
+        ? `« ${name} » est installé.`
+        : `« ${name} » est installé, avec ${dependencies} dépendance${dependencies > 1 ? "s" : ""}.`,
+    unavailable: (names: string) =>
+      `Introuvable pour cette version du serveur : ${names}. Le contenu installé risque de ne pas fonctionner.`,
+    manualTitle: "Téléchargement manuel nécessaire",
+    manualDescription: (folder: string) =>
+      `Leur auteur n'autorise le téléchargement que depuis le site de CurseForge. Télécharge ces fichiers, puis place-les dans le dossier « ${folder} » du serveur.`,
+  },
   errors: {
     network:
       "Impossible de joindre Internet. Vérifie ta connexion, puis réessaie.",
@@ -594,6 +665,7 @@ export const fr = {
       "Le port de ce serveur est déjà utilisé. Un autre serveur tourne peut-être déjà sur ce PC.",
     alreadyRunning: "Ce serveur est déjà en marche.",
     notRunning: "Ce serveur n'est pas démarré.",
+    mustBeStopped: "Arrête d'abord le serveur.",
     eulaNotAccepted:
       "L'EULA de Minecraft doit être acceptée pour lancer un serveur.",
     loaderInstall:
@@ -614,6 +686,10 @@ export const fr = {
       "Ton compte playit.gg a atteint son nombre maximal d'agents. Supprime les anciens agents « MinyHost » sur playit.gg, puis réessaie.",
     playit:
       "playit.gg n'a pas pu traiter la demande. Vérifie ta connexion, puis réessaie.",
+    contentUnavailable:
+      "Aucune version compatible avec ce serveur (version de Minecraft ou type de serveur).",
+    curseforgeUnavailable:
+      "CurseForge n'est pas disponible dans cette version de MinyHost.",
     unknown: "Une erreur inattendue est survenue.",
   },
   // Help page. Answers use "\n" for line breaks (lists, steps).

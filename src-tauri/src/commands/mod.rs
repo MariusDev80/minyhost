@@ -4,6 +4,7 @@
 //! Each command must also be registered in `lib.rs` (`generate_handler!`) and
 //! wrapped in `src/lib/tauri.ts` (`commands`).
 
+pub mod content;
 pub mod folders;
 pub mod operators;
 pub mod process;

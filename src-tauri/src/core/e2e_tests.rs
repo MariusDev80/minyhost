@@ -117,6 +117,69 @@ async fn run_lifecycle_of(loader: Loader, mc_version: &str) {
     std::fs::remove_dir_all(paths.server_dir(&instance.id)).unwrap();
 }
 
+/// Search, install with dependencies, update, then plugins and datapacks.
+#[tokio::test]
+#[ignore = "calls the Modrinth API"]
+async fn modrinth_content() {
+    use crate::core::content::{self, ContentKind, Source, Target};
+
+    let http = http_client().unwrap();
+    let dir = std::env::temp_dir().join("minyhost-e2e-content");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let mods = Target {
+        kind: ContentKind::Mod,
+        mc_version: "1.21.1".into(),
+        loader: Loader::Fabric,
+    };
+    let page = content::search(&http, Source::Modrinth, mods.kind, "chunky", Some(&mods), 0)
+        .await
+        .unwrap();
+    let chunky = page.hits.iter().find(|hit| hit.title == "Chunky").unwrap();
+
+    // Chunky needs Fabric API, installed along with it.
+    let outcome = content::install(&http, &dir, Source::Modrinth, &chunky.project_id, &mods)
+        .await
+        .unwrap();
+    println!("{outcome:?}");
+    assert_eq!(outcome.installed.len(), 2);
+    let installed = content::list_installed(&dir, Loader::Fabric).unwrap();
+    assert_eq!(installed.len(), 2);
+    assert!(installed.iter().any(|item| item.meta.as_ref().unwrap().dependency));
+
+    // Installing again replaces the file, dependencies are left alone.
+    let again = content::install(&http, &dir, Source::Modrinth, &chunky.project_id, &mods)
+        .await
+        .unwrap();
+    assert_eq!(again.installed, vec!["Chunky".to_string()]);
+    assert_eq!(content::list_installed(&dir, Loader::Fabric).unwrap().len(), 2);
+
+    // A plugin and a datapack on a Paper server.
+    for (kind, query) in [
+        (ContentKind::Plugin, "chunky"),
+        (ContentKind::Datapack, "veinminer"),
+    ] {
+        let target = Target {
+            kind,
+            mc_version: "1.21.1".into(),
+            loader: Loader::Paper,
+        };
+        let page = content::search(&http, Source::Modrinth, kind, query, Some(&target), 0)
+            .await
+            .unwrap();
+        let hit = page.hits.first().unwrap();
+        content::install(&http, &dir, Source::Modrinth, &hit.project_id, &target)
+            .await
+            .unwrap();
+    }
+    let paper = content::list_installed(&dir, Loader::Paper).unwrap();
+    assert!(paper.iter().any(|item| item.kind == ContentKind::Plugin));
+    assert!(dir.join("world/datapacks").read_dir().unwrap().count() == 1);
+
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
 #[tokio::test]
 #[ignore = "calls the Mojang APIs"]
 async fn player_lookup_and_skin() {

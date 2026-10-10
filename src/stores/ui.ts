@@ -14,6 +14,7 @@ export type Route =
   | { name: "servers" }
   | { name: "create-server" }
   | { name: "server"; id: string }
+  | { name: "add-content"; id: string }
   | { name: "settings" }
   | { name: "help" }
   | { name: "design-system" };

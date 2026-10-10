@@ -63,7 +63,11 @@ export function Sidebar() {
 
 /** Sidebar entry to highlight: sub-pages belong to their parent section. */
 function sectionOf(route: Route): SectionRoute {
-  if (route.name === "server" || route.name === "create-server")
+  if (
+    route.name === "server" ||
+    route.name === "add-content" ||
+    route.name === "create-server"
+  )
     return "servers";
   return route.name;
 }

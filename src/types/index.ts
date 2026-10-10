@@ -177,6 +177,75 @@ export interface TunnelState {
   agentName: string | null;
 }
 
+/** Rust: `core/content/mod.rs` (`ContentKind`). */
+export type ContentKind = "mod" | "plugin" | "datapack" | "modpack";
+
+/** Rust: `core/content/mod.rs` (`Source`). */
+export type ContentSource = "modrinth" | "curseforge";
+
+/** Sources offered by this build. Rust: `commands/content.rs`. */
+export interface ContentSources {
+  /** Only when the app was built with a CurseForge API key. */
+  curseforge: boolean;
+}
+
+/** One search result. Rust: `core/content/mod.rs` (`ContentHit`). */
+export interface ContentHit {
+  source: ContentSource;
+  projectId: string;
+  title: string;
+  description: string;
+  author: string;
+  iconUrl: string | null;
+  downloads: number;
+  pageUrl: string;
+}
+
+/** Rust: `core/content/mod.rs` (`SearchPage`). */
+export interface SearchPage {
+  hits: ContentHit[];
+  /** Results of the whole search. */
+  total: number;
+}
+
+/** Origin of a file installed by MinyHost. Rust: `ContentMeta`. */
+export interface ContentMeta {
+  source: ContentSource;
+  projectId: string;
+  versionId: string;
+  title: string;
+  versionNumber: string;
+  iconUrl?: string;
+  pageUrl: string;
+  /** Installed because another project needs it. */
+  dependency: boolean;
+}
+
+/** A mod, plugin or datapack of a server. Rust: `InstalledContent`. */
+export interface InstalledContent {
+  kind: ContentKind;
+  /** Without the `.disabled` suffix. */
+  fileName: string;
+  enabled: boolean;
+  /** `null` for files added by hand. */
+  meta: ContentMeta | null;
+}
+
+/** A file to download from CurseForge's website. Rust: `ManualDownload`. */
+export interface ManualDownload {
+  title: string;
+  fileName: string;
+  pageUrl: string;
+}
+
+/** Rust: `core/content/mod.rs` (`InstallOutcome`). */
+export interface InstallOutcome {
+  installed: string[];
+  /** Dependencies with no version for this server. */
+  unavailable: string[];
+  manual: ManualDownload[];
+}
+
 /** Error returned by every command. Rust: `error.rs` (`AppError::code`). */
 export type AppErrorCode =
   | "network"
@@ -189,6 +258,7 @@ export type AppErrorCode =
   | "portInUse"
   | "alreadyRunning"
   | "notRunning"
+  | "mustBeStopped"
   | "eulaNotAccepted"
   | "loaderInstall"
   | "missingFiles"
@@ -199,7 +269,9 @@ export type AppErrorCode =
   | "playitLimit"
   | "playitUnverified"
   | "playitAgentLimit"
-  | "playit";
+  | "playit"
+  | "contentUnavailable"
+  | "curseforgeUnavailable";
 
 export interface AppError {
   code: AppErrorCode;

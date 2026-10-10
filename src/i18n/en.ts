@@ -35,6 +35,7 @@ export const en: Messages = {
     edit: "Edit",
     send: "Send",
     restart: "Restart",
+    close: "Close",
   },
   loaders: {
     vanilla: {
@@ -60,6 +61,8 @@ export const en: Messages = {
   },
   units: {
     memory: (mb: number) => `${mb / 1024} GB`,
+    downloads: (count: number) =>
+      `${new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(count)} downloads`,
   },
   home: {
     title: "Welcome",
@@ -557,6 +560,71 @@ export const en: Messages = {
     title: "Stopping the servers…",
     description: "MinyHost is saving the worlds before closing.",
   },
+  content: {
+    tab: "Content",
+    title: {
+      vanilla: "Datapacks",
+      paper: "Plugins and datapacks",
+      fabric: "Mods and datapacks",
+      neoforge: "Mods and datapacks",
+      forge: "Mods and datapacks",
+    },
+    description: {
+      vanilla:
+        "Datapacks add recipes, mechanics or structures. Players have nothing to install.",
+      paper:
+        "Plugins add features to the server. Players have nothing to install.",
+      fabric:
+        "Mods change the game. Players often need to install the same ones on their side.",
+      neoforge:
+        "Mods change the game. Players often need to install the same ones on their side.",
+      forge:
+        "Mods change the game. Players often need to install the same ones on their side.",
+    },
+    kinds: {
+      mod: "Mods",
+      plugin: "Plugins",
+      datapack: "Datapacks",
+      modpack: "Modpacks",
+    },
+    folders: {
+      mod: "mods",
+      plugin: "plugins",
+      datapack: "world/datapacks",
+      modpack: "",
+    },
+    sources: {
+      modrinth: "Modrinth",
+      curseforge: "CurseForge",
+    },
+    add: "Add",
+    addTitle: "Add content",
+    compatibleHint: (server: string) =>
+      `Only content compatible with ${server} is shown.`,
+    stopFirst: "Stop the server to add, disable or remove content.",
+    empty: "Nothing installed yet.",
+    dependency: "Dependency",
+    manual: "Added by hand",
+    enable: (name: string) => `Enable “${name}”`,
+    remove: (name: string) => `Remove “${name}”`,
+    openPage: "View page",
+    searchPlaceholder: (kind: string) => `Search ${kind.toLowerCase()}…`,
+    by: (author: string) => `by ${author}`,
+    noResults: "No compatible results.",
+    searchError: "Could not load the results. Check your connection.",
+    loadMore: "Show more",
+    install: "Install",
+    update: "Update",
+    installed: (name: string, dependencies: number) =>
+      dependencies === 0
+        ? `“${name}” is installed.`
+        : `“${name}” is installed, with ${dependencies} dependenc${dependencies > 1 ? "ies" : "y"}.`,
+    unavailable: (names: string) =>
+      `Not found for this server version: ${names}. The installed content may not work.`,
+    manualTitle: "Manual download needed",
+    manualDescription: (folder: string) =>
+      `Their author only allows downloads from the CurseForge website. Download these files, then put them in the server's “${folder}” folder.`,
+  },
   errors: {
     network: "Can't reach the Internet. Check your connection, then try again.",
     io: "Can't read or write files on this PC. Check the available disk space.",
@@ -569,6 +637,7 @@ export const en: Messages = {
       "This server's port is already in use. Another server may already be running on this PC.",
     alreadyRunning: "This server is already running.",
     notRunning: "This server isn't running.",
+    mustBeStopped: "Stop the server first.",
     eulaNotAccepted: "The Minecraft EULA must be accepted to start a server.",
     loaderInstall:
       "Installing the modded server failed. Check your connection, then try again.",
@@ -588,6 +657,10 @@ export const en: Messages = {
       "Your playit.gg account has reached its maximum number of agents. Delete the old “MinyHost” agents on playit.gg, then try again.",
     playit:
       "playit.gg couldn't handle the request. Check your connection, then try again.",
+    contentUnavailable:
+      "No version compatible with this server (Minecraft version or server type).",
+    curseforgeUnavailable:
+      "CurseForge is not available in this version of MinyHost.",
     unknown: "An unexpected error occurred.",
   },
   faq: {

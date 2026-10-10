@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useServerEvents } from "@/hooks/useServerEvents";
 import { useApplyLocale } from "@/hooks/useLocale";
 import { useApplyTheme } from "@/hooks/useTheme";
+import { AddContentPage } from "@/pages/AddContent";
 import { CreateServerPage } from "@/pages/CreateServer";
 import { DesignSystemPage } from "@/pages/DesignSystem";
 import { HelpPage } from "@/pages/Help";
@@ -27,6 +28,8 @@ function CurrentPage({ route }: { route: Route }) {
     case "server":
       // `key` resets the page state when switching from one server to another.
       return <ServerDetailPage key={route.id} id={route.id} />;
+    case "add-content":
+      return <AddContentPage key={route.id} id={route.id} />;
     case "settings":
       return <SettingsPage />;
     case "help":

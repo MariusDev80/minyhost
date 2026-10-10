@@ -57,4 +57,6 @@ pub mod server_files {
     pub const JAR: &str = "server.jar";
     pub const EULA: &str = "eula.txt";
     pub const PROPERTIES: &str = "server.properties";
+    /// Origin of the mods, plugins and datapacks installed by MinyHost.
+    pub const CONTENT: &str = "content.json";
 }
