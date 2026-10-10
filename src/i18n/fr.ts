@@ -94,13 +94,27 @@ export const fr = {
     eulaLink: "Lire l'EULA",
     eulaHint: "Obligatoire pour héberger un serveur Minecraft.",
     submit: "Créer le serveur",
+    modes: {
+      blank: "Nouveau serveur",
+      modpack: "Depuis un modpack",
+    },
+    pick: "Choisir",
+    changeModpack: "Changer",
+    modpackVersion: "Version du modpack",
+    modpackUnsupported:
+      "Aucune version de ce modpack n'est prise en charge (Quilt n'est pas encore géré).",
+    notSupported: "non pris en charge",
+    modpackMemoryHint:
+      "Les modpacks demandent plus de mémoire : 6 Go conviennent à la plupart, 8 Go et plus pour les plus gros.",
     progressTitle: "Création du serveur",
     progressHint: "La première fois, cela peut prendre quelques minutes.",
     steps: {
       preparing: "Préparation",
+      downloadingModpack: "Téléchargement du modpack",
       downloadingJava: "Téléchargement de Java",
       downloadingServer: "Téléchargement du serveur",
       installingLoader: "Installation du serveur moddé",
+      downloadingContent: "Téléchargement des mods",
       finalizing: "Finalisation",
     },
     failed: "La création a échoué",
@@ -688,6 +702,8 @@ export const fr = {
       "playit.gg n'a pas pu traiter la demande. Vérifie ta connexion, puis réessaie.",
     contentUnavailable:
       "Aucune version compatible avec ce serveur (version de Minecraft ou type de serveur).",
+    modpackUnsupported:
+      "Ce modpack utilise un type de serveur que MinyHost ne gère pas encore (Quilt par exemple).",
     curseforgeUnavailable:
       "CurseForge n'est pas disponible dans cette version de MinyHost.",
     unknown: "Une erreur inattendue est survenue.",
@@ -754,6 +770,31 @@ export const fr = {
           {
             q: "« Le port de ce serveur est déjà utilisé ». Que faire ?",
             a: "Un autre programme utilise déjà ce port, souvent un autre serveur Minecraft. Arrête les autres serveurs (dans MinyHost ou ailleurs), puis relance celui-ci.",
+          },
+        ],
+      },
+      {
+        title: "Mods, plugins et modpacks",
+        items: [
+          {
+            q: "Comment ajouter des mods, des plugins ou des datapacks ?",
+            a: "Arrête le serveur, puis ouvre l'onglet Contenu de sa page et clique sur Ajouter. Seul ce qui est compatible avec ta version de Minecraft et ton type de serveur est proposé : des plugins pour Paper, des mods pour Fabric, NeoForge et Forge, des datapacks pour tous. Ce dont un mod a besoin (Fabric API par exemple) est installé avec lui.",
+          },
+          {
+            q: "Comment créer un serveur à partir d'un modpack ?",
+            a: "« Créer un serveur », onglet « Depuis un modpack ». Cherche le modpack, choisis sa version, puis crée le serveur : MinyHost installe la bonne version de Minecraft, le bon type de serveur et tous les mods. Prévois 6 Go de mémoire ou plus.",
+          },
+          {
+            q: "Mes amis doivent-ils installer les mêmes mods ?",
+            a: "Avec des plugins (Paper) ou des datapacks, non : tout se passe sur le serveur. Avec des mods ou un modpack, oui le plus souvent : chaque joueur installe le même modpack (ou les mêmes mods) dans son launcher, par exemple avec l'app Modrinth ou CurseForge.",
+          },
+          {
+            q: "« Téléchargement manuel nécessaire » : pourquoi ?",
+            a: "Certains auteurs n'autorisent le téléchargement de leurs fichiers que depuis le site de CurseForge. MinyHost respecte ce choix : ouvre la page de chaque fichier, télécharge-le, puis place-le dans le dossier « mods » du serveur (bouton « Ouvrir le dossier du serveur »).",
+          },
+          {
+            q: "Comment désactiver ou mettre à jour un mod ?",
+            a: "Serveur arrêté, dans l'onglet Contenu : l'interrupteur active ou désactive un mod ou un plugin, la croix le supprime. Pour le mettre à jour, retrouve-le dans Ajouter et clique sur « Mettre à jour ».",
           },
         ],
       },

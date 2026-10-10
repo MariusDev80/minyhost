@@ -13,6 +13,9 @@ import type {
   ContentSources,
   InstallOutcome,
   InstalledContent,
+  ModpackCreated,
+  ModpackVersion,
+  NewModpackServer,
   SearchPage,
   CreateProgress,
   GameSettings,
@@ -46,6 +49,8 @@ export const commands = {
     invoke<string[]>("list_versions", { loader }),
   createServer: (input: NewServer) =>
     invoke<Instance>("create_server", { input }),
+  createServerFromModpack: (input: NewModpackServer) =>
+    invoke<ModpackCreated>("create_server_from_modpack", { input }),
   deleteServer: (id: string) => invoke<void>("delete_server", { id }),
   serversFolderPath: () => invoke<string>("servers_folder_path"),
   /** Opens the folder in the file explorer. */
@@ -95,6 +100,8 @@ export const commands = {
     serverId: string | null;
     offset: number;
   }) => invoke<SearchPage>("search_content", params),
+  listModpackVersions: (source: ContentSource, projectId: string) =>
+    invoke<ModpackVersion[]>("list_modpack_versions", { source, projectId }),
   /** Project icon as a data URL. */
   contentIcon: (url: string) => invoke<string>("content_icon", { url }),
   listContent: (id: string) =>

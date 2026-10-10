@@ -92,6 +92,9 @@ pub enum AppError {
 
     #[error("this build has no CurseForge API key")]
     CurseforgeUnavailable,
+
+    #[error("modpacks for {0} are not supported")]
+    ModpackUnsupported(String),
 }
 
 impl AppError {
@@ -124,6 +127,7 @@ impl AppError {
             Self::Playit(_) => "playit",
             Self::ContentUnavailable(_) => "contentUnavailable",
             Self::CurseforgeUnavailable => "curseforgeUnavailable",
+            Self::ModpackUnsupported(_) => "modpackUnsupported",
         }
     }
 }

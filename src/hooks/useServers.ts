@@ -6,7 +6,7 @@ import { t } from "@/i18n";
 import { showError } from "@/lib/errors";
 import { commands } from "@/lib/tauri";
 import { useConsoleStore } from "@/stores/console";
-import type { NewServer, ServerInfo } from "@/types";
+import type { NewModpackServer, NewServer, ServerInfo } from "@/types";
 
 export const serversKey = ["servers"] as const;
 
@@ -29,6 +29,16 @@ export function useCreateServer() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: NewServer) => commands.createServer(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: serversKey }),
+  });
+}
+
+/** Long-running, like `useCreateServer`. */
+export function useCreateFromModpack() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: NewModpackServer) =>
+      commands.createServerFromModpack(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: serversKey }),
   });
 }

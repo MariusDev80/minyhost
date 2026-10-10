@@ -95,13 +95,27 @@ export const en: Messages = {
     eulaLink: "Read the EULA",
     eulaHint: "Required to host a Minecraft server.",
     submit: "Create the server",
+    modes: {
+      blank: "New server",
+      modpack: "From a modpack",
+    },
+    pick: "Choose",
+    changeModpack: "Change",
+    modpackVersion: "Modpack version",
+    modpackUnsupported:
+      "No version of this modpack is supported (Quilt is not handled yet).",
+    notSupported: "not supported",
+    modpackMemoryHint:
+      "Modpacks need more memory: 6 GB suit most of them, 8 GB or more for the biggest.",
     progressTitle: "Creating the server",
     progressHint: "The first time, this can take a few minutes.",
     steps: {
       preparing: "Preparing",
+      downloadingModpack: "Downloading the modpack",
       downloadingJava: "Downloading Java",
       downloadingServer: "Downloading the server",
       installingLoader: "Installing the modded server",
+      downloadingContent: "Downloading the mods",
       finalizing: "Finalizing",
     },
     failed: "The creation failed",
@@ -659,6 +673,8 @@ export const en: Messages = {
       "playit.gg couldn't handle the request. Check your connection, then try again.",
     contentUnavailable:
       "No version compatible with this server (Minecraft version or server type).",
+    modpackUnsupported:
+      "This modpack uses a server type MinyHost does not handle yet (Quilt for example).",
     curseforgeUnavailable:
       "CurseForge is not available in this version of MinyHost.",
     unknown: "An unexpected error occurred.",
@@ -724,6 +740,31 @@ export const en: Messages = {
           {
             q: "“This server's port is already in use”. What should I do?",
             a: "Another program already uses this port, often another Minecraft server. Stop the other servers (in MinyHost or elsewhere), then start this one again.",
+          },
+        ],
+      },
+      {
+        title: "Mods, plugins and modpacks",
+        items: [
+          {
+            q: "How do I add mods, plugins or datapacks?",
+            a: "Stop the server, then open the Content tab of its page and click Add. Only what fits your Minecraft version and server type is offered: plugins for Paper, mods for Fabric, NeoForge and Forge, datapacks for all. What a mod needs (Fabric API for example) is installed with it.",
+          },
+          {
+            q: "How do I create a server from a modpack?",
+            a: "“Create a server”, “From a modpack” tab. Search for the modpack, pick its version, then create the server: MinyHost installs the right Minecraft version, the right server type and every mod. Plan for 6 GB of memory or more.",
+          },
+          {
+            q: "Do my friends need the same mods?",
+            a: "With plugins (Paper) or datapacks, no: everything happens on the server. With mods or a modpack, usually yes: each player installs the same modpack (or the same mods) in their launcher, for example with the Modrinth or CurseForge app.",
+          },
+          {
+            q: "“Manual download needed”: why?",
+            a: "Some authors only allow their files to be downloaded from the CurseForge website. MinyHost respects that choice: open each file's page, download it, then put it in the server's “mods” folder (“Open the server folder” button).",
+          },
+          {
+            q: "How do I disable or update a mod?",
+            a: "With the server stopped, in the Content tab: the switch turns a mod or plugin on or off, the cross removes it. To update it, find it again in Add and click “Update”.",
           },
         ],
       },

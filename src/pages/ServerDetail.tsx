@@ -74,7 +74,13 @@ function ServerDetail({ server }: { server: ServerInfo }) {
     <>
       <PageHeader
         title={server.name}
-        description={`${loader.name} ${server.mcVersion}`}
+        description={[
+          `${loader.name} ${server.mcVersion}`,
+          server.modpack &&
+            `${server.modpack.title} ${server.modpack.versionNumber}`,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         actions={
           <>
             <StatusBadge status={server.status} className="self-center" />

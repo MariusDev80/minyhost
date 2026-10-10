@@ -96,16 +96,18 @@ impl Properties {
     }
 }
 
-/// Settings written when a server is created. Safe by default (CLAUDE.md):
-/// whitelist on and enforced, online mode on.
-pub fn defaults(port: u16, motd: &str) -> Properties {
-    let mut properties = Properties::default();
-    properties.set("motd", motd);
-    properties.set("server-port", &port.to_string());
-    properties.set("online-mode", "true");
-    properties.set("white-list", "true");
-    properties.set("enforce-whitelist", "true");
-    properties
+impl Properties {
+    /// Settings written when a server is created. Safe by default (CLAUDE.md):
+    /// whitelist on and enforced, online mode on. Set over existing values,
+    /// e.g. over the `server.properties` shipped in a modpack, whose other
+    /// settings (world type, difficulty…) are kept.
+    pub fn apply_defaults(&mut self, port: u16, motd: &str) {
+        self.set("motd", motd);
+        self.set("server-port", &port.to_string());
+        self.set("online-mode", "true");
+        self.set("white-list", "true");
+        self.set("enforce-whitelist", "true");
+    }
 }
 
 fn escape(value: &str) -> String {
@@ -190,7 +192,13 @@ mod tests {
 
     #[test]
     fn defaults_are_safe() {
-        let properties = defaults(25570, "Test");
+        let mut properties = Properties::parse(
+            "online-mode=false
+level-type=flat
+",
+        );
+        properties.apply_defaults(25570, "Test");
+        assert_eq!(properties.get("level-type"), Some("flat"));
         assert_eq!(properties.get("online-mode"), Some("true"));
         assert_eq!(properties.get("white-list"), Some("true"));
         assert_eq!(properties.get("server-port"), Some("25570"));

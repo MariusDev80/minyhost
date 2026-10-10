@@ -14,6 +14,7 @@
 //! ignores (mods and plugins only: a datapack folder would still load).
 
 pub mod curseforge;
+pub mod modpack;
 pub mod modrinth;
 
 use std::collections::{BTreeMap, HashSet};
@@ -39,7 +40,7 @@ pub enum ContentKind {
     Mod,
     Plugin,
     Datapack,
-    /// Only searched when creating a server, never installed in one.
+    /// Only searched when creating a server (`modpack.rs`), never installed in one.
     Modpack,
 }
 
@@ -496,6 +497,18 @@ fn manifest_key(server_dir: &Path, path: &Path) -> String {
         .map(|part| part.as_os_str().to_string_lossy())
         .collect::<Vec<_>>()
         .join("/")
+}
+
+/// Records where files installed by a modpack come from.
+pub fn record(server_dir: &Path, files: Vec<(PathBuf, ContentMeta)>) -> AppResult<()> {
+    if files.is_empty() {
+        return Ok(());
+    }
+    let mut manifest = load_manifest(server_dir);
+    for (path, meta) in files {
+        manifest.files.insert(manifest_key(server_dir, &path), meta);
+    }
+    save_manifest(server_dir, &manifest)
 }
 
 fn load_manifest(server_dir: &Path) -> Manifest {

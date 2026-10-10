@@ -40,6 +40,11 @@ impl AppPaths {
         self.root.join("java").join(version.to_string())
     }
 
+    /// `downloads/` — modpack archives while a server is being created.
+    pub fn downloads_dir(&self) -> PathBuf {
+        self.root.join("downloads")
+    }
+
     /// `servers/` — one folder per server instance.
     pub fn servers_dir(&self) -> PathBuf {
         self.root.join("servers")

@@ -6,6 +6,8 @@
 //!   `/project/<id>/version` filtered by loader and Minecraft version (newest
 //!   first). Files come with their SHA-1, checked after download.
 
+use std::collections::HashMap;
+
 use serde::Deserialize;
 
 use super::{
@@ -37,19 +39,34 @@ struct SearchHit {
 }
 
 #[derive(Deserialize)]
-struct Project {
-    id: String,
-    slug: String,
-    title: String,
-    icon_url: Option<String>,
+pub(super) struct Project {
+    pub id: String,
+    pub slug: String,
+    pub title: String,
+    pub icon_url: Option<String>,
+    /// "required", "optional", "unsupported" or "unknown".
+    #[serde(default)]
+    pub server_side: Option<String>,
+}
+
+/// A file found by its hash (`identify`).
+pub(super) struct Identified {
+    pub meta: ContentMeta,
+    /// The project says it does not run on servers.
+    pub client_only: bool,
 }
 
 #[derive(Deserialize)]
 pub(super) struct Version {
     pub id: String,
     pub project_id: String,
+    pub name: String,
     pub version_number: String,
     pub version_type: String,
+    #[serde(default)]
+    pub game_versions: Vec<String>,
+    #[serde(default)]
+    pub loaders: Vec<String>,
     pub files: Vec<VersionFile>,
     #[serde(default)]
     dependencies: Vec<Dependency>,
@@ -142,7 +159,7 @@ pub async fn resolve(
     project_id: &str,
     target: &Target,
 ) -> AppResult<Resolution> {
-    let project: Project = get_json(http, &format!("{API_URL}/project/{project_id}")).await?;
+    let project = get_project(http, project_id).await?;
     let versions = versions(
         http,
         &project.id,
@@ -176,29 +193,28 @@ pub async fn resolve(
     }
 
     Ok(Resolution::Found(Box::new(Resolved {
-        meta: ContentMeta {
-            source: Source::Modrinth,
-            project_id: project.id,
-            version_id: version.id.clone(),
-            title: project.title,
-            version_number: version.version_number.clone(),
-            icon_url: project.icon_url,
-            page_url: page_url(&project.slug),
-            dependency: false,
-        },
+        meta: project_meta(&project, version),
         file: remote_file(file),
         dependencies,
     })))
 }
 
-/// Versions of a project, newest first, filtered by loader and Minecraft version.
+pub(super) async fn get_project(http: &reqwest::Client, project_id: &str) -> AppResult<Project> {
+    get_json(http, &format!("{API_URL}/project/{project_id}")).await
+}
+
+/// Versions of a project, newest first, filtered by loader (none if empty)
+/// and Minecraft version.
 pub(super) async fn versions(
     http: &reqwest::Client,
     project_id: &str,
     loaders: &[&str],
     mc_version: Option<&str>,
 ) -> AppResult<Vec<Version>> {
-    let mut params = vec![("loaders", serde_json::to_string(loaders)?)];
+    let mut params = Vec::new();
+    if !loaders.is_empty() {
+        params.push(("loaders", serde_json::to_string(loaders)?));
+    }
     if let Some(mc_version) = mc_version {
         params.push(("game_versions", serde_json::to_string(&[mc_version])?));
     }
@@ -212,6 +228,61 @@ pub(super) async fn versions(
 
 pub(super) async fn get_version(http: &reqwest::Client, version_id: &str) -> AppResult<Version> {
     get_json(http, &format!("{API_URL}/version/{version_id}")).await
+}
+
+/// Projects and versions behind files, found by their SHA-1 (files of a
+/// modpack only come with their hash). Files Modrinth does not know are left out.
+pub(super) async fn identify(
+    http: &reqwest::Client,
+    sha1s: &[String],
+) -> AppResult<HashMap<String, Identified>> {
+    if sha1s.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let versions: HashMap<String, Version> = http
+        .post(format!("{API_URL}/version_files"))
+        .json(&serde_json::json!({ "hashes": sha1s, "algorithm": "sha1" }))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+
+    let mut ids: Vec<&str> = versions.values().map(|v| v.project_id.as_str()).collect();
+    ids.sort_unstable();
+    ids.dedup();
+    let url = reqwest::Url::parse_with_params(
+        &format!("{API_URL}/projects"),
+        &[("ids", serde_json::to_string(&ids)?)],
+    )
+    .map_err(|err| AppError::InvalidInput(err.to_string()))?;
+    let projects: Vec<Project> = get_json(http, url.as_str()).await?;
+    let projects: HashMap<&str, &Project> = projects.iter().map(|p| (p.id.as_str(), p)).collect();
+
+    Ok(versions
+        .into_iter()
+        .filter_map(|(sha1, version)| {
+            let project = projects.get(version.project_id.as_str())?;
+            let identified = Identified {
+                meta: project_meta(project, &version),
+                client_only: project.server_side.as_deref() == Some("unsupported"),
+            };
+            Some((sha1, identified))
+        })
+        .collect())
+}
+
+pub(super) fn project_meta(project: &Project, version: &Version) -> ContentMeta {
+    ContentMeta {
+        source: Source::Modrinth,
+        project_id: project.id.clone(),
+        version_id: version.id.clone(),
+        title: project.title.clone(),
+        version_number: version.version_number.clone(),
+        icon_url: project.icon_url.clone(),
+        page_url: page_url(&project.slug),
+        dependency: false,
+    }
 }
 
 /// The file to install: the one marked primary, else the first.
@@ -258,7 +329,7 @@ fn loaders_for(target: &Target) -> Vec<&'static str> {
 }
 
 /// Loaders of the modpacks MinyHost can host.
-fn modpack_loaders() -> Vec<&'static str> {
+pub(super) fn modpack_loaders() -> Vec<&'static str> {
     vec!["fabric", "neoforge", "forge"]
 }
 

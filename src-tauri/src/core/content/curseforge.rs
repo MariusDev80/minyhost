@@ -73,6 +73,9 @@ pub(super) struct Mod {
     authors: Vec<Author>,
     #[serde(default)]
     download_count: f64,
+    /// Category: mod, resource pack, datapack… (`class_id` below).
+    #[serde(default)]
+    pub class_id: Option<u32>,
 }
 
 #[derive(Deserialize)]
@@ -96,11 +99,16 @@ struct Author {
 #[serde(rename_all = "camelCase")]
 pub(super) struct File {
     pub id: u32,
+    pub mod_id: u32,
     pub display_name: String,
     pub file_name: String,
     pub download_url: Option<String>,
     #[serde(default)]
     hashes: Vec<FileHash>,
+    /// Minecraft versions, loaders, and "Client" / "Server" when the author
+    /// said where the file runs.
+    #[serde(default)]
+    pub game_versions: Vec<String>,
     #[serde(default)]
     dependencies: Vec<FileDependency>,
     release_type: u32,
@@ -109,6 +117,21 @@ pub(super) struct File {
     is_server_pack: Option<bool>,
     #[serde(default)]
     is_available: Option<bool>,
+    /// Modpacks: the server pack made by the author for this version.
+    #[serde(default)]
+    pub server_pack_file_id: Option<u32>,
+}
+
+impl File {
+    pub fn is_server_pack(&self) -> bool {
+        self.is_server_pack == Some(true)
+    }
+
+    /// Tagged "Client" but not "Server": would crash a server.
+    pub fn is_client_only(&self) -> bool {
+        let tagged = |name: &str| self.game_versions.iter().any(|v| v == name);
+        tagged("Client") && !tagged("Server")
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -135,6 +158,58 @@ pub(super) async fn get<T: DeserializeOwned>(
     let response = http
         .get(url)
         .header("x-api-key", key)
+        .send()
+        .await?
+        .error_for_status()?;
+    Ok(response.json().await?)
+}
+
+/// Several files at once, in no particular order.
+pub(super) async fn files(http: &reqwest::Client, ids: &[u32]) -> AppResult<Vec<File>> {
+    let response: Data<Vec<File>> =
+        post(http, "/mods/files", serde_json::json!({ "fileIds": ids })).await?;
+    Ok(response.data)
+}
+
+/// Several projects at once, in no particular order.
+pub(super) async fn projects(http: &reqwest::Client, ids: &[u32]) -> AppResult<Vec<Mod>> {
+    let response: Data<Vec<Mod>> =
+        post(http, "/mods", serde_json::json!({ "modIds": ids })).await?;
+    Ok(response.data)
+}
+
+pub(super) async fn file(http: &reqwest::Client, mod_id: u32, file_id: u32) -> AppResult<File> {
+    let response: Data<File> = get(http, &format!("/mods/{mod_id}/files/{file_id}"), &[]).await?;
+    Ok(response.data)
+}
+
+/// Files of a project, newest first (server packs left out).
+pub(super) async fn project_files(http: &reqwest::Client, mod_id: &str) -> AppResult<Vec<File>> {
+    let response: Data<Vec<File>> = get(
+        http,
+        &format!("/mods/{mod_id}/files"),
+        &[("pageSize", "50".into())],
+    )
+    .await?;
+    let mut files: Vec<File> = response
+        .data
+        .into_iter()
+        .filter(|file| !file.is_server_pack())
+        .collect();
+    files.sort_by(|a, b| b.file_date.cmp(&a.file_date));
+    Ok(files)
+}
+
+async fn post<T: DeserializeOwned>(
+    http: &reqwest::Client,
+    path: &str,
+    body: serde_json::Value,
+) -> AppResult<T> {
+    let key = api_key().ok_or(AppError::CurseforgeUnavailable)?;
+    let response = http
+        .post(format!("{API_URL}{path}"))
+        .header("x-api-key", key)
+        .json(&body)
         .send()
         .await?
         .error_for_status()?;
@@ -224,7 +299,7 @@ pub async fn resolve(
         candidates = response
             .data
             .into_iter()
-            .filter(|file| file.is_server_pack != Some(true) && file.is_available != Some(false))
+            .filter(|file| !file.is_server_pack() && file.is_available != Some(false))
             .collect();
         if !candidates.is_empty() {
             break;
@@ -297,7 +372,7 @@ fn major_version(mc_version: &str) -> String {
 }
 
 /// CurseForge category ("class") of each kind of content.
-fn class_id(kind: ContentKind) -> u32 {
+pub(super) fn class_id(kind: ContentKind) -> u32 {
     match kind {
         ContentKind::Mod => 6,
         ContentKind::Plugin => 5,

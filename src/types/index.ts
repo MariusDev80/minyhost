@@ -22,6 +22,8 @@ export interface Instance {
   createdAt: string;
   /** playit.gg tunnel, set while Internet access is on. */
   playitTunnelId?: string;
+  /** Modpack the server was created from. */
+  modpack?: ContentMeta;
 }
 
 /** An instance plus its live status. Rust: `commands/servers.rs` (`ServerInfo`). */
@@ -40,6 +42,34 @@ export interface NewServer {
   eulaAccepted: boolean;
   /** Optional: only the settings that differ from their default. */
   settings?: GameSettings;
+}
+
+/** Creation from a modpack. Rust: `core/create.rs` (`NewModpackServer`). */
+export interface NewModpackServer {
+  name: string;
+  memoryMb: number;
+  eulaAccepted: boolean;
+  source: ContentSource;
+  projectId: string;
+  /** Modrinth version id, or CurseForge file id. */
+  versionId: string;
+}
+
+/** Rust: `core/create.rs` (`ModpackCreated`). */
+export interface ModpackCreated {
+  instance: Instance;
+  /** Files to download by hand before the server can start. */
+  manual: ManualDownload[];
+}
+
+/** One version of a modpack. Rust: `core/content/modpack.rs` (`ModpackVersion`). */
+export interface ModpackVersion {
+  id: string;
+  name: string;
+  mcVersions: string[];
+  loaders: string[];
+  /** Made for a loader MinyHost can host. */
+  supported: boolean;
 }
 
 /** Value of a game setting. Rust: `core/game_settings.rs` (`SettingValue`). */
@@ -85,10 +115,14 @@ export interface SaveOutcome {
 /** Rust: `core/create.rs` (`CreateStep`). */
 export type CreateStep =
   | "preparing"
+  /** Modpacks only. */
+  | "downloadingModpack"
   | "downloadingJava"
   | "downloadingServer"
   /** Forge and NeoForge only. */
   | "installingLoader"
+  /** Modpacks only. */
+  | "downloadingContent"
   | "finalizing";
 
 /** Payload of the `create-progress` event. */
@@ -271,7 +305,8 @@ export type AppErrorCode =
   | "playitAgentLimit"
   | "playit"
   | "contentUnavailable"
-  | "curseforgeUnavailable";
+  | "curseforgeUnavailable"
+  | "modpackUnsupported";
 
 export interface AppError {
   code: AppErrorCode;

@@ -63,6 +63,15 @@ export function useContentSearch(params: {
   });
 }
 
+/** Versions of a modpack, newest first. */
+export function useModpackVersions(source: ContentSource, projectId: string) {
+  return useQuery({
+    queryKey: ["modpack-versions", source, projectId],
+    queryFn: () => commands.listModpackVersions(source, projectId),
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
 /** Project icon, fetched by Rust once per app session. */
 export function useContentIcon(url: string | null | undefined) {
   return useQuery({

@@ -80,7 +80,82 @@ async fn run_lifecycle_of(loader: Loader, mc_version: &str) {
     let instance = create_server(&http, &paths, input, |p| println!("{p:?}"))
         .await
         .unwrap();
+    start_and_stop(&paths, &instance.id).await;
+}
 
+/// The official Cobblemon modpack (Fabric): pinned loader, mods, overrides.
+#[tokio::test]
+#[ignore = "downloads Java, Minecraft and a modpack, takes a few minutes"]
+async fn modrinth_modpack_lifecycle() {
+    run_modrinth_modpack("cobblemon-fabric", Loader::Fabric, Some("Cobblemon")).await;
+}
+
+#[tokio::test]
+#[ignore = "downloads Java, Minecraft and a modpack, takes a few minutes"]
+async fn modrinth_neoforge_modpack_lifecycle() {
+    run_modrinth_modpack("create-oneblock", Loader::Neoforge, Some("Create")).await;
+}
+
+#[tokio::test]
+#[ignore = "downloads Java, Minecraft and a modpack, takes a few minutes"]
+async fn modrinth_forge_modpack_lifecycle() {
+    run_modrinth_modpack("slimes-adventure", Loader::Forge, None).await;
+}
+
+/// Creates a server from the latest version of a Modrinth pack made for `loader`.
+async fn run_modrinth_modpack(slug: &str, loader: Loader, expected_mod: Option<&str>) {
+    use crate::core::content::{self, modpack, Source};
+    use crate::core::create::{create_from_modpack, NewModpackServer};
+
+    let root = std::env::temp_dir().join("minyhost-e2e");
+    let paths = AppPaths::new(root.clone());
+    let http = http_client().unwrap();
+
+    let loader_name = format!("{loader:?}").to_lowercase();
+    let versions = modpack::versions(&http, Source::Modrinth, slug)
+        .await
+        .unwrap();
+    let version = versions
+        .iter()
+        .find(|v| v.supported && v.loaders.contains(&loader_name))
+        .unwrap();
+    println!("creating from {} ({:?})", version.name, version.loaders);
+
+    let input = NewModpackServer {
+        name: "Test Modpack".into(),
+        memory_mb: 4096,
+        eula_accepted: true,
+        source: Source::Modrinth,
+        project_id: slug.into(),
+        version_id: version.id.clone(),
+    };
+    let created = create_from_modpack(&http, &paths, input, |p| println!("{p:?}"))
+        .await
+        .unwrap();
+    assert!(created.manual.is_empty());
+    let instance = created.instance;
+    assert_eq!(instance.loader, loader);
+    assert!(instance.modpack.is_some());
+
+    let dir = paths.server_dir(&instance.id);
+    let installed = content::list_installed(&dir, instance.loader).unwrap();
+    println!("{} files installed", installed.len());
+    if let Some(expected) = expected_mod {
+        assert!(installed
+            .iter()
+            .any(|item| item.meta.as_ref().is_some_and(|m| m.title == expected)));
+    }
+    assert!(
+        paths.downloads_dir().read_dir().unwrap().next().is_none(),
+        "archive removed"
+    );
+
+    start_and_stop(&paths, &instance.id).await;
+}
+
+/// Starts the server, waits until players can join, sends a command, stops
+/// it, then deletes it.
+async fn start_and_stop(paths: &AppPaths, id: &str) {
     let events = Arc::new(Mutex::new(Vec::new()));
     let sink_events = events.clone();
     let manager = ProcessManager::new(
@@ -93,19 +168,19 @@ async fn run_lifecycle_of(loader: Loader, mc_version: &str) {
         }),
     );
 
-    manager.start(&instance.id).await.unwrap();
-    let ready = tokio::time::timeout(Duration::from_secs(180), async {
-        while manager.status(&instance.id).await != ServerStatus::Running {
+    manager.start(id).await.unwrap();
+    let ready = tokio::time::timeout(Duration::from_secs(300), async {
+        while manager.status(id).await != ServerStatus::Running {
             tokio::time::sleep(Duration::from_millis(500)).await;
         }
     })
     .await;
     assert!(ready.is_ok(), "server did not reach Running");
 
-    manager.send_command(&instance.id, "list").await.unwrap();
-    let outcome = manager.stop(&instance.id).await.unwrap();
+    manager.send_command(id, "list").await.unwrap();
+    let outcome = manager.stop(id).await.unwrap();
     assert!(matches!(outcome, StopOutcome::Graceful));
-    assert_eq!(manager.status(&instance.id).await, ServerStatus::Stopped);
+    assert_eq!(manager.status(id).await, ServerStatus::Stopped);
 
     let crashed = events
         .lock()
@@ -114,7 +189,7 @@ async fn run_lifecycle_of(loader: Loader, mc_version: &str) {
         .any(|event| matches!(event, ServerEvent::Crashed { .. }));
     assert!(!crashed, "a clean stop must not be reported as a crash");
 
-    std::fs::remove_dir_all(paths.server_dir(&instance.id)).unwrap();
+    std::fs::remove_dir_all(paths.server_dir(id)).unwrap();
 }
 
 /// Search, install with dependencies, update, then plugins and datapacks.
@@ -146,14 +221,19 @@ async fn modrinth_content() {
     assert_eq!(outcome.installed.len(), 2);
     let installed = content::list_installed(&dir, Loader::Fabric).unwrap();
     assert_eq!(installed.len(), 2);
-    assert!(installed.iter().any(|item| item.meta.as_ref().unwrap().dependency));
+    assert!(installed
+        .iter()
+        .any(|item| item.meta.as_ref().unwrap().dependency));
 
     // Installing again replaces the file, dependencies are left alone.
     let again = content::install(&http, &dir, Source::Modrinth, &chunky.project_id, &mods)
         .await
         .unwrap();
     assert_eq!(again.installed, vec!["Chunky".to_string()]);
-    assert_eq!(content::list_installed(&dir, Loader::Fabric).unwrap().len(), 2);
+    assert_eq!(
+        content::list_installed(&dir, Loader::Fabric).unwrap().len(),
+        2
+    );
 
     // A plugin and a datapack on a Paper server.
     for (kind, query) in [

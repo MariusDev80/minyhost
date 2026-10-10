@@ -6,6 +6,7 @@
 use serde::Serialize;
 use tauri::State;
 
+use crate::core::content::modpack::{self, ModpackVersion};
 use crate::core::content::{
     self, curseforge, ContentKind, InstallOutcome, InstalledContent, SearchPage, Source, Target,
 };
@@ -45,6 +46,16 @@ pub async fn search_content(
         None => None,
     };
     content::search(&state.http, source, kind, &query, target.as_ref(), offset).await
+}
+
+/// Versions of a modpack, newest first.
+#[tauri::command]
+pub async fn list_modpack_versions(
+    state: State<'_, AppState>,
+    source: Source,
+    project_id: String,
+) -> AppResult<Vec<ModpackVersion>> {
+    modpack::versions(&state.http, source, &project_id).await
 }
 
 /// Project icon as a data URL.

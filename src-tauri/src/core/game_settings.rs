@@ -474,6 +474,7 @@ mod tests {
             created_at: String::new(),
             pending_game_rules: BTreeMap::new(),
             playit_tunnel_id: None,
+            modpack: None,
         }
     }
 

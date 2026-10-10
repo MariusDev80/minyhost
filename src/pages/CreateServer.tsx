@@ -3,20 +3,31 @@ import {
   AlertCircle,
   ArrowLeft,
   ChevronDown,
-  ExternalLink,
   SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ManualDownloadsDialog } from "@/components/content/ManualDownloadsDialog";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
+import {
+  EulaField,
+  Field,
+  MemoryField,
+} from "@/components/server/CreateFields";
 import { CreationProgress } from "@/components/server/CreationProgress";
-import { loaderList } from "@/components/server/loaders";
+import {
+  loaderList,
+  modpackSteps,
+  serverSteps,
+} from "@/components/server/loaders";
+import {
+  ModpackForm,
+  type ModpackDraft,
+} from "@/components/server/ModpackForm";
 import { GameSettingsForm } from "@/components/server/settings/GameSettingsForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -25,37 +36,62 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCreateServer } from "@/hooks/useServers";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCreateFromModpack, useCreateServer } from "@/hooks/useServers";
 import { useSettingsCatalog } from "@/hooks/useGameSettings";
 import { useVersions } from "@/hooks/useVersions";
 import { errorMessage } from "@/lib/errors";
 import { emptySettings, onlyChanged } from "@/lib/gameSettings";
-import { openExternal } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
 import { useUiStore } from "@/stores/ui";
-import type { GameSettings, Loader, NewServer } from "@/types";
+import type {
+  GameSettings,
+  Instance,
+  Loader,
+  ManualDownload,
+  NewServer,
+} from "@/types";
 
 const MEMORY_OPTIONS_MB = [2048, 3072, 4096, 6144, 8192];
 const DEFAULT_MEMORY_MB = 3072;
 const MAX_NAME_LENGTH = 40; // Same limit as Rust (`core/create.rs`).
-const EULA_URL = "https://aka.ms/MinecraftEULA";
+
+type Mode = "blank" | "modpack";
 
 /**
- * Three states, driven by the creation mutation:
- * form -> progress (pending) -> server page (success) or error card.
+ * Two ways to create a server: the form (type, version…) or a modpack.
+ * Each is driven by its mutation: form -> progress (pending) -> server page
+ * (success) or error card.
  */
 export function CreateServerPage() {
   const navigate = useUiStore((state) => state.navigate);
+  const [mode, setMode] = useState<Mode>("blank");
   const create = useCreateServer();
+  const createPack = useCreateFromModpack();
+  const [draft, setDraft] = useState<ModpackDraft>();
+  // Files to download by hand once a CurseForge pack is installed.
+  const [manual, setManual] = useState<{
+    instance: Instance;
+    downloads: ManualDownload[];
+  }>();
+  const creation = mode === "blank" ? create : createPack;
 
+  const created = (instance: Instance) => {
+    toast.success(t.create.success(instance.name));
+    navigate({ name: "server", id: instance.id });
+  };
   const submit = (input: NewServer) =>
-    create.mutate(input, {
-      onSuccess: (instance) => {
-        toast.success(t.create.success(instance.name));
-        navigate({ name: "server", id: instance.id });
-      },
+    create.mutate(input, { onSuccess: created });
+  const submitPack = (pack: ModpackDraft) => {
+    setDraft(pack);
+    createPack.mutate(pack.input, {
+      onSuccess: ({ instance, manual }) =>
+        manual.length > 0
+          ? setManual({ instance, downloads: manual })
+          : created(instance),
     });
+  };
 
   return (
     <div className="space-y-8">
@@ -63,7 +99,7 @@ export function CreateServerPage() {
         <Button
           variant="ghost"
           size="sm"
-          disabled={create.isPending}
+          disabled={creation.isPending}
           onClick={() => navigate({ name: "servers" })}
         >
           <ArrowLeft data-icon="inline-start" />
@@ -72,20 +108,30 @@ export function CreateServerPage() {
         <PageHeader title={t.create.title} description={t.create.description} />
       </div>
 
-      {create.isPending ? (
-        <CreationProgress loader={create.variables.loader} />
-      ) : create.isError ? (
+      {creation.isPending ? (
+        <CreationProgress
+          steps={
+            mode === "blank"
+              ? serverSteps(create.variables?.loader ?? "paper")
+              : modpackSteps(draft?.version.loaders ?? [])
+          }
+        />
+      ) : creation.isError ? (
         <EmptyState
           icon={AlertCircle}
           title={t.create.failed}
-          description={errorMessage(create.error)}
+          description={errorMessage(creation.error)}
           action={
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => create.reset()}>
+              <Button variant="outline" onClick={() => creation.reset()}>
                 {t.actions.edit}
               </Button>
               <Button
-                onClick={() => create.variables && submit(create.variables)}
+                onClick={() =>
+                  mode === "blank"
+                    ? create.variables && submit(create.variables)
+                    : draft && submitPack(draft)
+                }
               >
                 {t.actions.retry}
               </Button>
@@ -93,8 +139,31 @@ export function CreateServerPage() {
           }
         />
       ) : (
-        // `create.variables` restores the form after "Modifier".
-        <CreateServerForm initial={create.variables} onSubmit={submit} />
+        <div className="space-y-4">
+          <Tabs value={mode} onValueChange={(value) => setMode(value as Mode)}>
+            <TabsList>
+              <TabsTrigger value="blank">{t.create.modes.blank}</TabsTrigger>
+              <TabsTrigger value="modpack">
+                {t.create.modes.modpack}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {mode === "blank" ? (
+            // `create.variables` restores the form after "Modifier".
+            <CreateServerForm initial={create.variables} onSubmit={submit} />
+          ) : (
+            <ModpackForm initial={draft} onSubmit={submitPack} />
+          )}
+        </div>
+      )}
+
+      {manual && (
+        <ManualDownloadsDialog
+          serverId={manual.instance.id}
+          folder={t.content.folders.mod}
+          downloads={manual.downloads}
+          onClose={() => created(manual.instance)}
+        />
       )}
     </div>
   );
@@ -219,26 +288,12 @@ function CreateServerForm({
             )}
           </Field>
 
-          <Field label={t.create.memory} hint={t.create.memoryHint}>
-            <div
-              role="radiogroup"
-              aria-label={t.create.memory}
-              className="flex flex-wrap gap-2"
-            >
-              {MEMORY_OPTIONS_MB.map((mb) => (
-                <Button
-                  key={mb}
-                  type="button"
-                  role="radio"
-                  aria-checked={memoryMb === mb}
-                  variant={memoryMb === mb ? "default" : "outline"}
-                  onClick={() => setMemoryMb(mb)}
-                >
-                  {t.units.memory(mb)}
-                </Button>
-              ))}
-            </div>
-          </Field>
+          <MemoryField
+            options={MEMORY_OPTIONS_MB}
+            value={memoryMb}
+            onChange={setMemoryMb}
+            hint={t.create.memoryHint}
+          />
 
           <div className="rounded-lg border">
             <button
@@ -279,29 +334,7 @@ function CreateServerForm({
             )}
           </div>
 
-          <div className="space-y-1 rounded-lg border p-3">
-            <div className="flex items-center gap-3">
-              <Checkbox
-                id="server-eula"
-                checked={eulaAccepted}
-                onCheckedChange={(checked) => setEulaAccepted(checked === true)}
-              />
-              <Label htmlFor="server-eula">{t.create.eula}</Label>
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                className="ml-auto"
-                onClick={() => void openExternal(EULA_URL)}
-              >
-                {t.create.eulaLink}
-                <ExternalLink data-icon="inline-end" />
-              </Button>
-            </div>
-            <p className="pl-7 text-xs text-muted-foreground">
-              {t.create.eulaHint}
-            </p>
-          </div>
+          <EulaField checked={eulaAccepted} onChange={setEulaAccepted} />
 
           <div className="flex justify-end">
             <Button type="submit" size="lg" disabled={!canSubmit}>
@@ -311,25 +344,5 @@ function CreateServerForm({
         </CardContent>
       </Card>
     </form>
-  );
-}
-
-function Field({
-  label,
-  htmlFor,
-  hint,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-    </div>
   );
 }

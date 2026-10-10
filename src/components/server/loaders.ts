@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { t } from "@/i18n";
-import type { Loader } from "@/types";
+import type { CreateStep, Loader } from "@/types";
 
 const icons: Record<Loader, LucideIcon> = {
   paper: Zap,
@@ -39,4 +39,28 @@ export function usesInstaller(loader: Loader) {
 /** Every server type, in display order. */
 export function loaderList() {
   return order.map(loaderInfo);
+}
+
+/** Steps of a server created from the form. */
+export function serverSteps(loader: Loader): CreateStep[] {
+  return [
+    "preparing",
+    "downloadingJava",
+    "downloadingServer",
+    ...(usesInstaller(loader) ? (["installingLoader"] as const) : []),
+    "finalizing",
+  ];
+}
+
+/** Steps of a server created from a modpack made for `loaders`. */
+export function modpackSteps(loaders: string[]): CreateStep[] {
+  const installer = loaders.some((l) => l === "forge" || l === "neoforge");
+  return [
+    "downloadingModpack",
+    "downloadingJava",
+    "downloadingServer",
+    ...(installer ? (["installingLoader"] as const) : []),
+    "downloadingContent",
+    "finalizing",
+  ];
 }
