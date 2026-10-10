@@ -197,13 +197,16 @@ pub(super) async fn get<T: DeserializeOwned>(
     let key = api_key().ok_or(AppError::CurseforgeUnavailable)?;
     let url = reqwest::Url::parse_with_params(&format!("{API_URL}{path}"), params)
         .map_err(|err| AppError::InvalidInput(err.to_string()))?;
-    let response = http
-        .get(url)
-        .header("x-api-key", key)
-        .send()
-        .await?
-        .error_for_status()?;
-    Ok(response.json().await?)
+    let response = http.get(url).header("x-api-key", key).send().await?;
+    Ok(check_key(response)?.json().await?)
+}
+
+/// CurseForge answers 401 / 403 when the key of this build is refused.
+fn check_key(response: reqwest::Response) -> AppResult<reqwest::Response> {
+    if matches!(response.status().as_u16(), 401 | 403) {
+        return Err(AppError::CurseforgeUnavailable);
+    }
+    Ok(response.error_for_status()?)
 }
 
 /// Several files at once, in no particular order.
@@ -253,9 +256,8 @@ async fn post<T: DeserializeOwned>(
         .header("x-api-key", key)
         .json(&body)
         .send()
-        .await?
-        .error_for_status()?;
-    Ok(response.json().await?)
+        .await?;
+    Ok(check_key(response)?.json().await?)
 }
 
 pub(super) async fn project(http: &reqwest::Client, mod_id: &str) -> AppResult<Mod> {
@@ -295,8 +297,10 @@ pub async fn search(
     }
     let response: SearchResponse = get(http, "/mods/search", &params).await?;
 
+    let total = response.pagination.total_count;
     Ok(SearchPage {
-        total: response.pagination.total_count.min(u64::from(MAX_RESULTS)),
+        next_offset: SearchPage::next_offset(offset, total, u64::from(MAX_RESULTS)),
+        total: total.min(u64::from(MAX_RESULTS)),
         hits: response
             .data
             .into_iter()

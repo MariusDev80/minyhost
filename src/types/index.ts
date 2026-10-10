@@ -240,6 +240,8 @@ export interface SearchPage {
   hits: ContentHit[];
   /** Results of the whole search. */
   total: number;
+  /** Where the next page starts, `null` on the last one. */
+  nextOffset: number | null;
 }
 
 /** Origin of a file installed by MinyHost. Rust: `ContentMeta`. */

@@ -289,6 +289,34 @@ async fn modrinth_content() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
+/// What the modpack picker loads: a page of results, then each one's versions.
+#[tokio::test]
+#[ignore = "needs CURSEFORGE_API_KEY, calls the CurseForge API"]
+async fn curseforge_modpack_picker() {
+    use crate::core::content::{self, modpack, ContentKind};
+
+    let http = http_client().unwrap();
+    for offset in [0, 20] {
+        let page = content::search(
+            &http,
+            Source::Curseforge,
+            ContentKind::Modpack,
+            "",
+            None,
+            offset,
+        )
+        .await
+        .unwrap();
+        println!("offset {offset}: {} hits / {}", page.hits.len(), page.total);
+        for hit in &page.hits {
+            match modpack::versions(&http, Source::Curseforge, &hit.project_id).await {
+                Ok(versions) => println!("  {} -> {} versions", hit.title, versions.len()),
+                Err(err) => println!("  {} -> ERROR {err}", hit.title),
+            }
+        }
+    }
+}
+
 /// Same as `modrinth_content`, from CurseForge.
 #[tokio::test]
 #[ignore = "needs CURSEFORGE_API_KEY, calls the CurseForge API"]

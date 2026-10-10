@@ -707,7 +707,7 @@ export const fr = {
     distributionBlocked:
       "L'auteur de ce modpack n'autorise son téléchargement que depuis le site de CurseForge : MinyHost ne peut pas l'installer.",
     curseforgeUnavailable:
-      "CurseForge n'est pas disponible dans cette version de MinyHost.",
+      "CurseForge n'est pas disponible dans cette version de MinyHost (clé d'accès absente ou refusée). Utilise Modrinth.",
     unknown: "Une erreur inattendue est survenue.",
   },
   // Help page. Answers use "\n" for line breaks (lists, steps).

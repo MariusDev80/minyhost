@@ -137,6 +137,7 @@ pub async fn search(
     let response: SearchResponse = get_json(http, url.as_str()).await?;
 
     Ok(SearchPage {
+        next_offset: SearchPage::next_offset(offset, response.total_hits, u64::MAX),
         total: response.total_hits,
         hits: response
             .hits

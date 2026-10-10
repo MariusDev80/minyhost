@@ -90,7 +90,7 @@ pub enum AppError {
     #[error("no version of {0} for this server")]
     ContentUnavailable(String),
 
-    #[error("this build has no CurseForge API key")]
+    #[error("this build has no CurseForge API key, or CurseForge refused it")]
     CurseforgeUnavailable,
 
     #[error("modpacks for {0} are not supported")]

@@ -52,12 +52,7 @@ export function useContentSearch(params: {
     queryFn: ({ pageParam }) =>
       commands.searchContent({ ...params, offset: pageParam }),
     initialPageParam: 0,
-    getNextPageParam: (lastPage, pages) => {
-      const loaded = pages.reduce((sum, page) => sum + page.hits.length, 0);
-      return lastPage.hits.length > 0 && loaded < lastPage.total
-        ? loaded
-        : undefined;
-    },
+    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
     // Results change slowly; keep them while browsing back and forth.
     staleTime: 10 * 60 * 1000,
   });

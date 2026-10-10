@@ -109,6 +109,18 @@ pub struct SearchPage {
     pub hits: Vec<ContentHit>,
     /// Number of results for the whole search.
     pub total: u64,
+    /// Where the next page starts, `None` on the last one. Not
+    /// `offset + hits.len()`: some results of a page may be left out.
+    pub next_offset: Option<u32>,
+}
+
+impl SearchPage {
+    /// `next_offset` of the page starting at `offset`, out of `total`
+    /// results (at most `limit` reachable).
+    pub fn next_offset(offset: u32, total: u64, limit: u64) -> Option<u32> {
+        let next = offset + PAGE_SIZE;
+        (u64::from(next) < total.min(limit)).then_some(next)
+    }
 }
 
 /// Results per search page.
@@ -549,6 +561,14 @@ mod tests {
             page_url: "https://modrinth.com/project/sodium".into(),
             dependency: false,
         }
+    }
+
+    #[test]
+    fn pages_follow_the_offset() {
+        assert_eq!(SearchPage::next_offset(0, 45, u64::MAX), Some(20));
+        assert_eq!(SearchPage::next_offset(40, 45, u64::MAX), None);
+        assert_eq!(SearchPage::next_offset(9_960, 50_000, 10_000), Some(9_980));
+        assert_eq!(SearchPage::next_offset(9_980, 50_000, 10_000), None);
     }
 
     #[test]

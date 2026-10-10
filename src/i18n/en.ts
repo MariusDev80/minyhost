@@ -678,7 +678,7 @@ export const en: Messages = {
     distributionBlocked:
       "This modpack's author only allows downloading it from the CurseForge website: MinyHost cannot install it.",
     curseforgeUnavailable:
-      "CurseForge is not available in this version of MinyHost.",
+      "CurseForge is not available in this version of MinyHost (access key missing or refused). Use Modrinth.",
     unknown: "An unexpected error occurred.",
   },
   faq: {
