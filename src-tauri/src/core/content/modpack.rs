@@ -315,7 +315,7 @@ async fn prepare_curseforge(
     let remote = curseforge::remote_file(&file);
     let url = remote
         .url
-        .ok_or_else(|| AppError::ContentUnavailable(project.name.clone()))?;
+        .ok_or_else(|| AppError::DistributionBlocked(project.name.clone()))?;
     download_file(
         http,
         &url,
@@ -499,6 +499,17 @@ async fn install_curseforge(
 
     let mods_dir = content_dir(server_dir, ContentKind::Mod)?;
     let datapacks_dir = content_dir(server_dir, ContentKind::Datapack)?;
+    // Modrinth often has the very same files (same hash): it tells which
+    // ones only run on the client when CurseForge's tags do not, and serves
+    // those their author keeps off third-party apps on CurseForge.
+    let sha1s: Vec<String> = files.iter().filter_map(curseforge::File::sha1).collect();
+    let mut on_modrinth = modrinth::identify(http, &sha1s)
+        .await
+        .unwrap_or_else(|err| {
+            eprintln!("could not look the modpack files up on Modrinth: {err}");
+            HashMap::new()
+        });
+
     let mut jobs = Vec::new();
     let mut recorded = Vec::new();
     let mut manual = Vec::new();
@@ -513,18 +524,24 @@ async fn install_curseforge(
             Some(CURSEFORGE_DATAPACKS) => &datapacks_dir,
             _ => continue,
         };
+        let found = file.sha1().and_then(|sha1| on_modrinth.remove(&sha1));
+        let is_client_only =
+            file.is_client_only() || found.as_ref().is_some_and(|found| found.client_only);
         let remote = curseforge::remote_file(file);
-        let Some(url) = remote.url else {
-            manual.push(ManualDownload {
-                title: project.name.clone(),
-                file_name: file.file_name.clone(),
-                page_url: project.links.website_url.clone(),
-            });
+        let Some(url) = remote.url.or(found.map(|found| found.url)) else {
+            // A client mod is not worth a manual download.
+            if !is_client_only {
+                manual.push(ManualDownload {
+                    title: project.name.clone(),
+                    file_name: file.file_name.clone(),
+                    page_url: project.links.website_url.clone(),
+                });
+            }
             continue;
         };
         let dest = folder.join(safe_file_name(&remote.file_name)?);
         // Downloaded anyway: its ids tell which mods depend on it.
-        if file.is_client_only() {
+        if is_client_only {
             client_only.push(dest.clone());
         }
         recorded.push((dest.clone(), curseforge::meta(project, file)));

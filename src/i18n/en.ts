@@ -675,6 +675,8 @@ export const en: Messages = {
       "No version compatible with this server (Minecraft version or server type).",
     modpackUnsupported:
       "This modpack uses a server type MinyHost does not handle yet (Quilt for example).",
+    distributionBlocked:
+      "This modpack's author only allows downloading it from the CurseForge website: MinyHost cannot install it.",
     curseforgeUnavailable:
       "CurseForge is not available in this version of MinyHost.",
     unknown: "An unexpected error occurred.",

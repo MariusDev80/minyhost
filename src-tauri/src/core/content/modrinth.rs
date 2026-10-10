@@ -54,6 +54,8 @@ pub(super) struct Identified {
     pub meta: ContentMeta,
     /// The project says it does not run on servers.
     pub client_only: bool,
+    /// Where Modrinth serves this exact file.
+    pub url: String,
 }
 
 #[derive(Deserialize)]
@@ -263,7 +265,14 @@ pub(super) async fn identify(
         .into_iter()
         .filter_map(|(sha1, version)| {
             let project = projects.get(version.project_id.as_str())?;
+            let file = version.files.iter().find(|file| {
+                file.hashes
+                    .sha1
+                    .as_ref()
+                    .is_some_and(|hash| hash.eq_ignore_ascii_case(&sha1))
+            })?;
             let identified = Identified {
+                url: file.url.clone(),
                 meta: project_meta(project, &version),
                 client_only: project.server_side.as_deref() == Some("unsupported"),
             };

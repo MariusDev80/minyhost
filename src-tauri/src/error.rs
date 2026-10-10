@@ -95,6 +95,9 @@ pub enum AppError {
 
     #[error("modpacks for {0} are not supported")]
     ModpackUnsupported(String),
+
+    #[error("{0} can only be downloaded from CurseForge's website")]
+    DistributionBlocked(String),
 }
 
 impl AppError {
@@ -128,6 +131,7 @@ impl AppError {
             Self::ContentUnavailable(_) => "contentUnavailable",
             Self::CurseforgeUnavailable => "curseforgeUnavailable",
             Self::ModpackUnsupported(_) => "modpackUnsupported",
+            Self::DistributionBlocked(_) => "distributionBlocked",
         }
     }
 }

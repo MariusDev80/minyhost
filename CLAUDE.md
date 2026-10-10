@@ -185,7 +185,7 @@ Les gamerules vivent dans le monde, qui est la source de vérité : MinyHost les
 
 **Depuis un modpack** (`create_server_from_modpack`, `core/content/modpack.rs`) : l'archive est téléchargée d'abord dans `downloads/`, car elle fixe la version de Minecraft et la version exacte du loader. Puis le pipeline habituel, et enfin les fichiers du pack :
 - Modrinth (`.mrpack`) : fichiers de `modrinth.index.json` sauf `env.server = unsupported`, téléchargés uniquement depuis les domaines autorisés par le format, SHA-1 vérifié, puis `overrides/` et `server-overrides/`.
-- CurseForge : le server pack de l'auteur s'il existe (sans ses scripts, jars racine ni `libraries/`), sinon le `manifest.json` du pack client moins les fichiers marqués « Client » seulement. Les fichiers dont l'auteur interdit la distribution sont listés pour un téléchargement manuel.
+- CurseForge : le server pack de l'auteur s'il existe (sans ses scripts, jars racine ni `libraries/`), sinon le `manifest.json` du pack client moins les fichiers marqués « Client » seulement. Chaque fichier est aussi cherché sur Modrinth par son SHA-1 : un fichier dont l'auteur interdit la distribution sur CurseForge est pris sur Modrinth s'il y publie exactement le même ; sinon il est listé pour un téléchargement manuel (sauf s'il est uniquement client). Les modpacks non distribuables sont masqués de la recherche.
 - Mods uniquement client : beaucoup de packs en listent pour le serveur, qui plante alors au démarrage. Sont retirés ceux que Modrinth (par hash, `server_side = unsupported`) ou CurseForge (tag « Client » seul) désignent comme tels, ceux qui le déclarent (`environment: client` de Fabric), puis en cascade les mods qui en exigent un (`core/content/jar_info.rs` lit `mods.toml` / `fabric.mod.json`).
 - Les chemins des archives ne sont jamais crus sur parole (pas de sortie du dossier du serveur). Un `server.properties` fourni par le pack est gardé, mais `white-list`, `enforce-whitelist`, `online-mode`, le port et le motd sont toujours réappliqués.
 - Quilt n'est pas pris en charge. NeoForge 1.20.1 (fork de Forge) est installé comme Forge.
@@ -211,7 +211,7 @@ Les JRE sont téléchargés depuis l'API Adoptium (Temurin) et stockés dans `ja
    ```
    Pour Forge 1.17+ et NeoForge, `-jar server.jar` est remplacé par les arguments de la dernière ligne `java` du `run.bat` généré par l'installeur (`@libraries/…/win_args.txt`). Avec le dossier du serveur comme répertoire de travail et sans fenêtre console (`CREATE_NO_WINDOW` sous Windows).
 3. Rust lit `stdout` / `stderr` ligne par ligne et émet un événement `console-line` `{ id, line, stream }`.
-4. Le statut passe par `starting` → `running` (détection de la ligne `Done (...)! For help, type "help"`) → `stopping` → `stopped`. Chaque changement émet `server-status`.
+4. Le statut passe par `starting` → `running` (détection de la ligne `Done (...)! For help, type "help"`) → `stopping` → `stopped`. Chaque changement émet `server-status`. Après `Failed to start the minecraft server`, si la JVM ne quitte pas d'elle-même (certains mods la retiennent), elle est tuée au bout de 15 s : le serveur apparaît planté au lieu de rester en démarrage.
 5. Un seul processus par instance. Le registre des processus actifs est tenu côté Rust (état partagé Tauri).
 
 ### 5.4 Console et commandes
@@ -242,7 +242,7 @@ Les JRE sont téléchargés depuis l'API Adoptium (Temurin) et stockés dans `ja
 - Bouton « Copier l'adresse » dans tous les cas.
 
 ### 5.8 Mods, plugins et datapacks
-- Selon le type de serveur (`content::kinds_for`) : datapacks pour tous, plugins pour Paper (Paper, Spigot, Bukkit), mods pour Fabric / NeoForge / Forge. Les résultats sont filtrés sur la version de Minecraft et le type ; les mods uniquement client sont exclus (`server_side` sur Modrinth).
+- Selon le type de serveur (`content::kinds_for`) : datapacks pour tous, plugins pour Paper (Paper, Spigot, Bukkit), mods pour Fabric / NeoForge / Forge. Les résultats sont filtrés sur la version de Minecraft et le type ; les mods uniquement client sont exclus (`server_side` sur Modrinth, tags « Client » des derniers fichiers sur CurseForge, qui n'a pas de filtre serveur).
 - Installation de la dernière version compatible (release de préférence) et de ses dépendances requises. Réinstaller un projet le met à jour ; une dépendance déjà présente est laissée telle quelle.
 - Les dossiers (`mods/`, `plugins/`, `<level-name>/datapacks/`) font foi : un fichier ajouté à la main apparaît aussi. `content.json` ne fait que mémoriser l'origine des fichiers installés par MinyHost.
 - Désactiver = renommer en `.disabled` (mods et plugins seulement).

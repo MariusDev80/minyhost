@@ -704,6 +704,8 @@ export const fr = {
       "Aucune version compatible avec ce serveur (version de Minecraft ou type de serveur).",
     modpackUnsupported:
       "Ce modpack utilise un type de serveur que MinyHost ne gère pas encore (Quilt par exemple).",
+    distributionBlocked:
+      "L'auteur de ce modpack n'autorise son téléchargement que depuis le site de CurseForge : MinyHost ne peut pas l'installer.",
     curseforgeUnavailable:
       "CurseForge n'est pas disponible dans cette version de MinyHost.",
     unknown: "Une erreur inattendue est survenue.",

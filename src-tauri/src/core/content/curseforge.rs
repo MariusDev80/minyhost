@@ -73,9 +73,44 @@ pub(super) struct Mod {
     authors: Vec<Author>,
     #[serde(default)]
     download_count: f64,
+    /// `false`: files only downloadable from CurseForge's website.
+    #[serde(default)]
+    allow_mod_distribution: Option<bool>,
+    /// Newest files (search results only), to spot client-only mods.
+    #[serde(default)]
+    latest_files: Vec<LatestFile>,
     /// Category: mod, resource pack, datapack… (`class_id` below).
     #[serde(default)]
     pub class_id: Option<u32>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LatestFile {
+    #[serde(default)]
+    game_versions: Vec<String>,
+}
+
+impl Mod {
+    /// Every newest file that says where it runs (old ones do not) is tagged
+    /// "Client" only. CurseForge cannot filter mods by side, so search
+    /// results are checked here.
+    fn is_client_only(&self) -> bool {
+        let mut tagged = self.latest_files.iter().filter(|file| {
+            file.game_versions
+                .iter()
+                .any(|v| v == "Client" || v == "Server")
+        });
+        let first = tagged.next();
+        first.is_some_and(|file| is_client_only(&file.game_versions))
+            && tagged.all(|file| is_client_only(&file.game_versions))
+    }
+}
+
+/// Tagged "Client" but not "Server".
+fn is_client_only(game_versions: &[String]) -> bool {
+    let tagged = |name: &str| game_versions.iter().any(|v| v == name);
+    tagged("Client") && !tagged("Server")
 }
 
 #[derive(Deserialize)]
@@ -127,10 +162,17 @@ impl File {
         self.is_server_pack == Some(true)
     }
 
+    /// SHA-1 of the file, lowercase hex.
+    pub fn sha1(&self) -> Option<String> {
+        self.hashes
+            .iter()
+            .find(|hash| hash.algo == SHA1)
+            .map(|hash| hash.value.to_lowercase())
+    }
+
     /// Tagged "Client" but not "Server": would crash a server.
     pub fn is_client_only(&self) -> bool {
-        let tagged = |name: &str| self.game_versions.iter().any(|v| v == name);
-        tagged("Client") && !tagged("Server")
+        is_client_only(&self.game_versions)
     }
 }
 
@@ -258,6 +300,12 @@ pub async fn search(
         hits: response
             .data
             .into_iter()
+            // A modpack is installed whole: it cannot be if its author keeps
+            // it on CurseForge's website. A mod can (manual download).
+            .filter(|project| {
+                kind != ContentKind::Modpack || project.allow_mod_distribution != Some(false)
+            })
+            .filter(|project| kind != ContentKind::Mod || !project.is_client_only())
             .map(|project| ContentHit {
                 source: Source::Curseforge,
                 project_id: project.id.to_string(),
@@ -299,7 +347,9 @@ pub async fn resolve(
         candidates = response
             .data
             .into_iter()
-            .filter(|file| !file.is_server_pack() && file.is_available != Some(false))
+            .filter(|file| {
+                !file.is_server_pack() && !file.is_client_only() && file.is_available != Some(false)
+            })
             .collect();
         if !candidates.is_empty() {
             break;
@@ -410,6 +460,23 @@ mod tests {
             vec![Some("1.21.1".into()), Some("1.21".into()), None]
         );
         assert_eq!(major_version("26.1.2"), "26.1");
+    }
+
+    #[test]
+    fn client_only_mods_are_spotted() {
+        let project = |files: &[&str]| Mod {
+            latest_files: files
+                .iter()
+                .map(|tags| LatestFile {
+                    game_versions: tags.split(',').map(String::from).collect(),
+                })
+                .collect(),
+            ..serde_json::from_str(r#"{"id":1,"name":"x","links":{"websiteUrl":""}}"#).unwrap()
+        };
+        // Mouse Tweaks: old untagged files, newest ones client only.
+        assert!(project(&["1.12.2", "Client,Fabric,26.3", "Client,Forge,26.3"]).is_client_only());
+        assert!(!project(&["Client,Server,Fabric,26.3"]).is_client_only());
+        assert!(!project(&["1.21.1,Fabric"]).is_client_only());
     }
 
     #[test]

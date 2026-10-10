@@ -306,7 +306,8 @@ export type AppErrorCode =
   | "playit"
   | "contentUnavailable"
   | "curseforgeUnavailable"
-  | "modpackUnsupported";
+  | "modpackUnsupported"
+  | "distributionBlocked";
 
 export interface AppError {
   code: AppErrorCode;

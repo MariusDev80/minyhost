@@ -7,6 +7,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::core::content::Source;
 use crate::core::create::{create_server, NewServer};
 use crate::core::process::{ProcessManager, ServerEvent, ServerStatus, StopOutcome};
 use crate::core::providers::{self, Loader};
@@ -87,24 +88,51 @@ async fn run_lifecycle_of(loader: Loader, mc_version: &str) {
 #[tokio::test]
 #[ignore = "downloads Java, Minecraft and a modpack, takes a few minutes"]
 async fn modrinth_modpack_lifecycle() {
-    run_modrinth_modpack("cobblemon-fabric", Loader::Fabric, Some("Cobblemon")).await;
+    run_modpack(
+        Source::Modrinth,
+        "cobblemon-fabric",
+        Loader::Fabric,
+        Some("Cobblemon"),
+    )
+    .await;
 }
 
 #[tokio::test]
 #[ignore = "downloads Java, Minecraft and a modpack, takes a few minutes"]
 async fn modrinth_neoforge_modpack_lifecycle() {
-    run_modrinth_modpack("create-oneblock", Loader::Neoforge, Some("Create")).await;
+    run_modpack(
+        Source::Modrinth,
+        "create-oneblock",
+        Loader::Neoforge,
+        Some("Create"),
+    )
+    .await;
 }
 
 #[tokio::test]
 #[ignore = "downloads Java, Minecraft and a modpack, takes a few minutes"]
 async fn modrinth_forge_modpack_lifecycle() {
-    run_modrinth_modpack("slimes-adventure", Loader::Forge, None).await;
+    run_modpack(Source::Modrinth, "slimes-adventure", Loader::Forge, None).await;
 }
 
-/// Creates a server from the latest version of a Modrinth pack made for `loader`.
-async fn run_modrinth_modpack(slug: &str, loader: Loader, expected_mod: Option<&str>) {
-    use crate::core::content::{self, modpack, Source};
+/// A CurseForge pack with a server pack (Forge 1.12.2, Java 8).
+#[tokio::test]
+#[ignore = "needs CURSEFORGE_API_KEY, downloads Java, Minecraft and a modpack"]
+async fn curseforge_server_pack_lifecycle() {
+    run_modpack(Source::Curseforge, "296062", Loader::Forge, None).await;
+}
+
+/// A CurseForge pack without a server pack: built from the client manifest.
+#[tokio::test]
+#[ignore = "needs CURSEFORGE_API_KEY, downloads Java, Minecraft and a modpack"]
+async fn curseforge_manifest_modpack_lifecycle() {
+    run_modpack(Source::Curseforge, "1258033", Loader::Fabric, None).await;
+}
+
+/// Creates a server from the latest version of a pack made for `loader`
+/// (CurseForge packs do not always tag their loader).
+async fn run_modpack(source: Source, project: &str, loader: Loader, expected_mod: Option<&str>) {
+    use crate::core::content::{self, modpack};
     use crate::core::create::{create_from_modpack, NewModpackServer};
 
     let root = std::env::temp_dir().join("minyhost-e2e");
@@ -112,12 +140,10 @@ async fn run_modrinth_modpack(slug: &str, loader: Loader, expected_mod: Option<&
     let http = http_client().unwrap();
 
     let loader_name = format!("{loader:?}").to_lowercase();
-    let versions = modpack::versions(&http, Source::Modrinth, slug)
-        .await
-        .unwrap();
+    let versions = modpack::versions(&http, source, project).await.unwrap();
     let version = versions
         .iter()
-        .find(|v| v.supported && v.loaders.contains(&loader_name))
+        .find(|v| v.supported && (v.loaders.is_empty() || v.loaders.contains(&loader_name)))
         .unwrap();
     println!("creating from {} ({:?})", version.name, version.loaders);
 
@@ -125,14 +151,17 @@ async fn run_modrinth_modpack(slug: &str, loader: Loader, expected_mod: Option<&
         name: "Test Modpack".into(),
         memory_mb: 4096,
         eula_accepted: true,
-        source: Source::Modrinth,
-        project_id: slug.into(),
+        source,
+        project_id: project.into(),
         version_id: version.id.clone(),
     };
     let created = create_from_modpack(&http, &paths, input, |p| println!("{p:?}"))
         .await
         .unwrap();
-    assert!(created.manual.is_empty());
+    println!("manual downloads: {:?}", created.manual);
+    if source == Source::Modrinth {
+        assert!(created.manual.is_empty());
+    }
     let instance = created.instance;
     assert_eq!(instance.loader, loader);
     assert!(instance.modpack.is_some());
@@ -256,6 +285,77 @@ async fn modrinth_content() {
     let paper = content::list_installed(&dir, Loader::Paper).unwrap();
     assert!(paper.iter().any(|item| item.kind == ContentKind::Plugin));
     assert!(dir.join("world/datapacks").read_dir().unwrap().count() == 1);
+
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+/// Same as `modrinth_content`, from CurseForge.
+#[tokio::test]
+#[ignore = "needs CURSEFORGE_API_KEY, calls the CurseForge API"]
+async fn curseforge_content() {
+    use crate::core::content::{self, ContentKind, Target};
+
+    let http = http_client().unwrap();
+    let dir = std::env::temp_dir().join("minyhost-e2e-curseforge");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    // Waystones needs Balm, installed along with it.
+    let mods = Target {
+        kind: ContentKind::Mod,
+        mc_version: "1.21.1".into(),
+        loader: Loader::Fabric,
+    };
+    let page = content::search(
+        &http,
+        Source::Curseforge,
+        mods.kind,
+        "waystones",
+        Some(&mods),
+        0,
+    )
+    .await
+    .unwrap();
+    let waystones = page
+        .hits
+        .iter()
+        .find(|hit| hit.title == "Waystones")
+        .unwrap();
+    let outcome = content::install(
+        &http,
+        &dir,
+        Source::Curseforge,
+        &waystones.project_id,
+        &mods,
+    )
+    .await
+    .unwrap();
+    println!("{outcome:?}");
+    assert!(outcome.installed.len() >= 2, "dependencies installed too");
+
+    // A plugin (often tagged "1.21" only) and a datapack on a Paper server.
+    for (kind, query) in [
+        (ContentKind::Plugin, "worldedit"),
+        (ContentKind::Datapack, ""),
+    ] {
+        let target = Target {
+            kind,
+            mc_version: "1.21.1".into(),
+            loader: Loader::Paper,
+        };
+        let page = content::search(&http, Source::Curseforge, kind, query, Some(&target), 0)
+            .await
+            .unwrap();
+        let hit = page.hits.first().unwrap();
+        println!("installing {kind:?} {}", hit.title);
+        let outcome = content::install(&http, &dir, Source::Curseforge, &hit.project_id, &target)
+            .await
+            .unwrap();
+        println!("{outcome:?}");
+    }
+    let paper = content::list_installed(&dir, Loader::Paper).unwrap();
+    assert!(paper.iter().any(|item| item.kind == ContentKind::Plugin));
+    assert!(paper.iter().any(|item| item.kind == ContentKind::Datapack));
 
     std::fs::remove_dir_all(&dir).unwrap();
 }
