@@ -14,6 +14,7 @@
 //! ignores (mods and plugins only: a datapack folder would still load).
 
 pub mod curseforge;
+mod jar_info;
 pub mod modpack;
 pub mod modrinth;
 

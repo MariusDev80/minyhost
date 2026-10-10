@@ -19,7 +19,7 @@
 //! Archive paths are never trusted: entries that would land outside the
 //! server folder are skipped.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -29,7 +29,7 @@ use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
 
 use super::{
-    content_dir, curseforge, modrinth, record, safe_file_name, ContentKind, ContentMeta,
+    content_dir, curseforge, jar_info, modrinth, record, safe_file_name, ContentKind, ContentMeta,
     ManualDownload, Source,
 };
 use crate::core::providers::Loader;
@@ -419,18 +419,19 @@ async fn install_mrpack(
 
     let mut jobs = Vec::new();
     let mut recorded = Vec::new();
+    let mut client_only = Vec::new();
     for file in files {
-        let found = identified.remove(&file.hashes.sha1);
-        if found.as_ref().is_some_and(|found| found.client_only) {
-            continue;
-        }
         let url = file
             .downloads
             .iter()
             .find(|url| is_mrpack_host(url))
             .ok_or_else(|| AppError::InvalidData(format!("download of {}", file.path)))?;
         let dest = server_dir.join(safe_relative_path(&file.path)?);
-        if let Some(found) = found {
+        if let Some(found) = identified.remove(&file.hashes.sha1) {
+            // Downloaded anyway: its ids tell which mods depend on it.
+            if found.client_only {
+                client_only.push(dest.clone());
+            }
             recorded.push((dest.clone(), found.meta));
         }
         jobs.push(Job {
@@ -441,12 +442,18 @@ async fn install_mrpack(
     }
     download_all(http, &jobs, on_progress).await?;
 
+    // Client overrides are checked like the listed files; server overrides
+    // are made for servers.
     let (from, to) = (archive.to_path_buf(), server_dir.to_path_buf());
-    blocking(move || {
-        extract_folder(&from, "overrides", &to)?;
-        extract_folder(&from, "server-overrides", &to)
-    })
-    .await?;
+    let written = blocking(move || extract_folder(&from, "overrides", &to)).await?;
+    let (found, flagged) = identify_override_jars(http, written).await;
+    recorded.extend(found);
+    client_only.extend(flagged);
+    remove_client_mods(server_dir, client_only).await?;
+    let (from, to) = (archive.to_path_buf(), server_dir.to_path_buf());
+    blocking(move || extract_folder(&from, "server-overrides", &to)).await?;
+
+    recorded.retain(|(path, _)| path.exists());
     record(server_dir, recorded)
 }
 
@@ -495,10 +502,8 @@ async fn install_curseforge(
     let mut jobs = Vec::new();
     let mut recorded = Vec::new();
     let mut manual = Vec::new();
+    let mut client_only = Vec::new();
     for file in &files {
-        if file.is_client_only() {
-            continue;
-        }
         let Some(project) = projects.get(&file.mod_id) else {
             continue;
         };
@@ -518,6 +523,10 @@ async fn install_curseforge(
             continue;
         };
         let dest = folder.join(safe_file_name(&remote.file_name)?);
+        // Downloaded anyway: its ids tell which mods depend on it.
+        if file.is_client_only() {
+            client_only.push(dest.clone());
+        }
         recorded.push((dest.clone(), curseforge::meta(project, file)));
         jobs.push(Job {
             url,
@@ -532,9 +541,124 @@ async fn install_curseforge(
         server_dir.to_path_buf(),
         manifest.overrides.clone(),
     );
-    blocking(move || extract_folder(&from, &overrides, &to)).await?;
+    let written = blocking(move || extract_folder(&from, &overrides, &to)).await?;
+    let (found, flagged) = identify_override_jars(http, written).await;
+    recorded.extend(found);
+    client_only.extend(flagged);
+    remove_client_mods(server_dir, client_only).await?;
+
+    recorded.retain(|(path, _)| path.exists());
     record(server_dir, recorded)?;
     Ok(manual)
+}
+
+/// Mods copied from a pack's overrides are not listed anywhere: Modrinth
+/// may know them by hash. Returns what it knows, and the jars it says only
+/// run on the client.
+async fn identify_override_jars(
+    http: &reqwest::Client,
+    written: Vec<PathBuf>,
+) -> (Vec<(PathBuf, ContentMeta)>, Vec<PathBuf>) {
+    let jars: Vec<PathBuf> = written
+        .into_iter()
+        .filter(|path| is_mod_jar(path))
+        .collect();
+    if jars.is_empty() {
+        return (Vec::new(), Vec::new());
+    }
+    let hashed = blocking(move || {
+        jars.into_iter()
+            .map(|jar| Ok((sha1_hex(&jar)?, jar)))
+            .collect::<AppResult<Vec<_>>>()
+    })
+    .await;
+    let hashed = match hashed {
+        Ok(hashed) => hashed,
+        Err(err) => {
+            eprintln!("could not read the modpack overrides: {err}");
+            return (Vec::new(), Vec::new());
+        }
+    };
+
+    let sha1s: Vec<String> = hashed.iter().map(|(sha1, _)| sha1.clone()).collect();
+    let mut identified = modrinth::identify(http, &sha1s)
+        .await
+        .unwrap_or_else(|err| {
+            eprintln!("could not identify the modpack overrides: {err}");
+            HashMap::new()
+        });
+    let (mut found, mut client_only) = (Vec::new(), Vec::new());
+    for (sha1, jar) in hashed {
+        if let Some(identified) = identified.remove(&sha1) {
+            if identified.client_only {
+                client_only.push(jar.clone());
+            }
+            found.push((jar, identified.meta));
+        }
+    }
+    (found, client_only)
+}
+
+fn is_mod_jar(path: &Path) -> bool {
+    path.extension().is_some_and(|ext| ext == "jar")
+        && path
+            .parent()
+            .and_then(Path::file_name)
+            .is_some_and(|dir| dir == "mods")
+}
+
+/// Removes client-only mods: those flagged by Modrinth or CurseForge, those
+/// declaring it themselves (Fabric), then, until nothing changes, the mods
+/// requiring a removed one (a mod built on a client-only library is a
+/// client mod too, and would refuse to start without it).
+async fn remove_client_mods(server_dir: &Path, flagged: Vec<PathBuf>) -> AppResult<()> {
+    let mods_dir = server_dir.join("mods");
+    blocking(move || {
+        let Ok(entries) = std::fs::read_dir(&mods_dir) else {
+            return Ok(());
+        };
+        let flagged: HashSet<PathBuf> = flagged.into_iter().collect();
+        let mut remaining = Vec::new();
+        let mut removed_ids = BTreeSet::new();
+        for path in entries.filter_map(|entry| Some(entry.ok()?.path())) {
+            if !is_mod_jar(&path) {
+                continue;
+            }
+            let info = jar_info::read(&path).unwrap_or_default();
+            if flagged.contains(&path) || info.client_only {
+                std::fs::remove_file(&path)?;
+                removed_ids.extend(info.ids);
+            } else {
+                remaining.push((path, info));
+            }
+        }
+
+        loop {
+            let (dependents, kept): (Vec<_>, Vec<_>) = remaining
+                .into_iter()
+                .partition(|(_, info)| info.requires.iter().any(|id| removed_ids.contains(id)));
+            remaining = kept;
+            if dependents.is_empty() {
+                return Ok(());
+            }
+            for (path, info) in dependents {
+                std::fs::remove_file(&path)?;
+                removed_ids.extend(info.ids);
+            }
+        }
+    })
+    .await
+}
+
+fn sha1_hex(path: &Path) -> AppResult<String> {
+    use sha1::{Digest, Sha1};
+    let mut hasher = Sha1::new();
+    hasher.update(std::fs::read(path)?);
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect())
 }
 
 /// Unpacks the author's server pack. `false` if it cannot be downloaded or
@@ -663,8 +787,8 @@ async fn blocking<T: Send + 'static>(
         .map_err(|err| AppError::Io(std::io::Error::other(err)))?
 }
 
-/// Copies the entries under `folder/` into `dest`.
-fn extract_folder(archive: &Path, folder: &str, dest: &Path) -> AppResult<()> {
+/// Copies the entries under `folder/` into `dest`; returns the files written.
+fn extract_folder(archive: &Path, folder: &str, dest: &Path) -> AppResult<Vec<PathBuf>> {
     extract(archive, dest, |path| {
         path.strip_prefix(folder).ok().map(Path::to_path_buf)
     })
@@ -680,7 +804,8 @@ fn extract_server_pack(archive: &Path, dest: &Path) -> AppResult<()> {
             None => path.to_path_buf(),
         };
         (!is_server_pack_leftover(&relative)).then_some(relative)
-    })
+    })?;
+    Ok(())
 }
 
 fn entry_names(archive: &Path) -> AppResult<Vec<PathBuf>> {
@@ -726,10 +851,15 @@ fn is_server_pack_leftover(path: &Path) -> bool {
         )
 }
 
-/// Writes the entries `map` keeps (renamed by it) into `dest`. Entries whose
-/// name could escape `dest` are skipped.
-fn extract(archive: &Path, dest: &Path, map: impl Fn(&Path) -> Option<PathBuf>) -> AppResult<()> {
+/// Writes the entries `map` keeps (renamed by it) into `dest`, and returns
+/// the files written. Entries whose name could escape `dest` are skipped.
+fn extract(
+    archive: &Path,
+    dest: &Path,
+    map: impl Fn(&Path) -> Option<PathBuf>,
+) -> AppResult<Vec<PathBuf>> {
     let mut zip = zip::ZipArchive::new(std::fs::File::open(archive)?)?;
+    let mut written = Vec::new();
     for index in 0..zip.len() {
         let mut entry = zip.by_index(index)?;
         let Some(name) = entry.enclosed_name() else {
@@ -747,8 +877,9 @@ fn extract(archive: &Path, dest: &Path, map: impl Fn(&Path) -> Option<PathBuf>) 
             std::fs::create_dir_all(parent)?;
         }
         std::io::copy(&mut entry, &mut std::fs::File::create(&out)?)?;
+        written.push(out);
     }
-    Ok(())
+    Ok(written)
 }
 
 #[cfg(test)]
@@ -878,6 +1009,62 @@ mod tests {
         }
         assert!(has_mods(&server));
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn hashes_files() {
+        let dir = temp_dir("sha1");
+        std::fs::write(dir.join("abc.txt"), b"abc").unwrap();
+        assert_eq!(
+            sha1_hex(&dir.join("abc.txt")).unwrap(),
+            "a9993e364706816aba3e25717850c26c9cd0d89d"
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn client_mods_and_their_dependents_are_removed() {
+        let server = temp_dir("client-mods");
+        let mods = server.join("mods");
+        std::fs::create_dir_all(&mods).unwrap();
+        let forge_mod = |id: &str, requires: &[&str]| {
+            let mut toml = format!("[[mods]]\nmodId=\"{id}\"\n");
+            for dependency in requires {
+                toml.push_str(&format!(
+                    "[[dependencies.{id}]]\nmodId=\"{dependency}\"\nmandatory=true\n"
+                ));
+            }
+            toml
+        };
+        // prism is flagged by Modrinth; tooltips (unknown) needs it; create does not.
+        zip_with(
+            &mods.join("prism.jar"),
+            &[("META-INF/mods.toml", &forge_mod("prism", &[]))],
+        );
+        zip_with(
+            &mods.join("tooltips.jar"),
+            &[(
+                "META-INF/mods.toml",
+                &forge_mod("legendarytooltips", &["prism"]),
+            )],
+        );
+        zip_with(
+            &mods.join("create.jar"),
+            &[("META-INF/mods.toml", &forge_mod("create", &["forge"]))],
+        );
+        zip_with(
+            &mods.join("etf.jar"),
+            &[("fabric.mod.json", r#"{"id":"etf","environment":"client"}"#)],
+        );
+
+        remove_client_mods(&server, vec![mods.join("prism.jar")])
+            .await
+            .unwrap();
+        assert!(mods.join("create.jar").exists());
+        for gone in ["prism.jar", "tooltips.jar", "etf.jar"] {
+            assert!(!mods.join(gone).exists(), "{gone}");
+        }
+        std::fs::remove_dir_all(&server).unwrap();
     }
 
     #[test]
