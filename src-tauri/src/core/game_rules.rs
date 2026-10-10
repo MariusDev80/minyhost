@@ -338,7 +338,7 @@ pub fn parse_change(line: &str, mc_version: &str) -> Option<(String, SettingValu
 /// `/gamerule` console commands setting these rules.
 ///
 /// Paper keeps separate rules for each dimension, so the command is sent in
-/// each of them; Vanilla and Fabric share one set of rules for all.
+/// each of them; the other server types share one set of rules for all.
 pub fn commands(
     mc_version: &str,
     loader: Loader,
@@ -350,7 +350,7 @@ pub fn commands(
             "minecraft:the_nether",
             "minecraft:the_end",
         ],
-        Loader::Vanilla | Loader::Fabric => &[],
+        Loader::Vanilla | Loader::Fabric | Loader::Neoforge | Loader::Forge => &[],
     };
 
     let mut commands = Vec::new();

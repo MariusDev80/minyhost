@@ -47,7 +47,15 @@ export const en: Messages = {
     },
     fabric: {
       name: "Fabric",
-      description: "To play with mods.",
+      description: "Light, up-to-date mods.",
+    },
+    neoforge: {
+      name: "NeoForge",
+      description: "Big mods and recent modpacks.",
+    },
+    forge: {
+      name: "Forge",
+      description: "Classic mods and modpacks.",
     },
   },
   units: {
@@ -90,6 +98,7 @@ export const en: Messages = {
       preparing: "Preparing",
       downloadingJava: "Downloading Java",
       downloadingServer: "Downloading the server",
+      installingLoader: "Installing the modded server",
       finalizing: "Finalizing",
     },
     failed: "The creation failed",
@@ -561,6 +570,8 @@ export const en: Messages = {
     alreadyRunning: "This server is already running.",
     notRunning: "This server isn't running.",
     eulaNotAccepted: "The Minecraft EULA must be accepted to start a server.",
+    loaderInstall:
+      "Installing the modded server failed. Check your connection, then try again.",
     missingFiles:
       "Some files of this server are missing. Delete it, then create it again.",
     invalidInput: "The information entered is not valid.",
@@ -598,7 +609,7 @@ export const en: Messages = {
           },
           {
             q: "Which server type should I pick?",
-            a: "• Paper: the fastest, supports plugins. The right choice in most cases.\n• Vanilla: Mojang's official server, unmodified.\n• Fabric: to play with mods. Players often need the same mods on their side.\nIn every case, players must use the same Minecraft version as the server.",
+            a: "• Paper: the fastest, supports plugins. The right choice in most cases.\n• Vanilla: Mojang's official server, unmodified.\n• Fabric: to play with light, up-to-date mods.\n• NeoForge and Forge: for big mods and modpacks (Create, All The Mods…). NeoForge for recent versions, Forge for older ones.\nWith mods, players often need the same mods on their side.\nIn every case, players must use the same Minecraft version as the server.",
           },
           {
             q: "How much memory (RAM) should the server get?",
@@ -668,7 +679,7 @@ export const en: Messages = {
           },
           {
             q: "My friends can't connect. What should I check?",
-            a: "• The server is started and the card shows “Open to the Internet”.\n• They use exactly the address shown (copy it with the button).\n• Their username is on the whitelist.\n• They have the same Minecraft version as the server (and the same mods with Fabric).\n• For a brand new tunnel, wait a minute.\n• Try the address yourself from this PC: if it works for you but not for them, the problem is on their side (version, username).\n• As a last resort: restart the server, or close then reopen Internet access (the address will change).",
+            a: "• The server is started and the card shows “Open to the Internet”.\n• They use exactly the address shown (copy it with the button).\n• Their username is on the whitelist.\n• They have the same Minecraft version as the server (and the same mods, if any).\n• For a brand new tunnel, wait a minute.\n• Try the address yourself from this PC: if it works for you but not for them, the problem is on their side (version, username).\n• As a last resort: restart the server, or close then reopen Internet access (the address will change).",
           },
           {
             q: "How do I know which playit.gg agent is MinyHost's?",

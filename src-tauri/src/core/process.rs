@@ -10,7 +10,6 @@
 //!   crash    -> process exits on its own  -> Stopped + Crashed event
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
@@ -21,6 +20,7 @@ use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::{oneshot, watch, Mutex};
 
 use crate::core::game_settings::SettingValue;
+use crate::core::providers::installer;
 use crate::core::{eula, game_rules, instances, java, properties};
 use crate::error::{AppError, AppResult};
 use crate::paths::{server_files, AppPaths};
@@ -177,6 +177,7 @@ impl ProcessManager {
             return Err(AppError::AlreadyRunning);
         }
         check_can_start(&instance, &dir, &java)?;
+        let launch_args = installer::launch_args(&dir)?;
 
         let mut command = Command::new(&java);
         command
@@ -188,7 +189,8 @@ impl ProcessManager {
                 "-Dstdout.encoding=UTF-8",
                 "-Dstderr.encoding=UTF-8",
             ])
-            .args(["-jar", server_files::JAR, "nogui"])
+            .args(&launch_args)
+            .arg("nogui")
             .current_dir(&dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -431,10 +433,8 @@ fn check_can_start(
     if !eula::is_accepted(dir) {
         return Err(AppError::EulaNotAccepted);
     }
-    for file in [dir.join(server_files::JAR), PathBuf::from(java)] {
-        if !file.exists() {
-            return Err(AppError::MissingFiles(file.display().to_string()));
-        }
+    if !java.exists() {
+        return Err(AppError::MissingFiles(java.display().to_string()));
     }
     if !(instances::MIN_MEMORY_MB..=instances::MAX_MEMORY_MB).contains(&instance.memory_mb) {
         return Err(AppError::InvalidInput(format!(

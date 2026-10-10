@@ -5,7 +5,7 @@
 
 use serde::Deserialize;
 
-use super::ServerJar;
+use super::{JarKind, ServerJar};
 use crate::download::get_json;
 use crate::error::{AppError, AppResult};
 
@@ -28,15 +28,24 @@ pub async fn list_versions(http: &reqwest::Client) -> AppResult<Vec<String>> {
         .collect())
 }
 
-/// Launcher jar for the latest stable loader and installer.
-/// Fabric does not publish a hash for this generated jar.
-pub async fn server_jar(http: &reqwest::Client, mc_version: &str) -> AppResult<ServerJar> {
-    let loader = latest_stable(http, "loader").await?;
+/// Launcher jar for `loader_version` (latest stable loader if `None`) and
+/// the latest stable installer. Fabric does not publish a hash for this
+/// generated jar.
+pub async fn server_jar(
+    http: &reqwest::Client,
+    mc_version: &str,
+    loader_version: Option<&str>,
+) -> AppResult<ServerJar> {
+    let loader = match loader_version {
+        Some(version) => version.to_string(),
+        None => latest_stable(http, "loader").await?,
+    };
     let installer = latest_stable(http, "installer").await?;
     Ok(ServerJar {
         url: format!("{API_URL}/versions/loader/{mc_version}/{loader}/{installer}/server/jar"),
         checksum: None,
         loader_version: Some(loader),
+        kind: JarKind::Server,
     })
 }
 

@@ -2,7 +2,7 @@
 // (`#[serde(rename_all = "camelCase")]`). The Rust file is noted on each type.
 
 /** Server type. Rust: `core/providers/mod.rs` (`Loader`). */
-export type Loader = "vanilla" | "paper" | "fabric";
+export type Loader = "vanilla" | "paper" | "fabric" | "neoforge" | "forge";
 
 /** Lifecycle of a server process. Rust: `core/process.rs` (`ServerStatus`). */
 export type ServerStatus = "starting" | "running" | "stopping" | "stopped";
@@ -13,7 +13,7 @@ export interface Instance {
   name: string;
   mcVersion: string;
   loader: Loader;
-  /** Paper build or Fabric loader version, `null` for Vanilla. */
+  /** Paper build, Fabric loader, Forge or NeoForge version; `null` for Vanilla. */
   loaderVersion: string | null;
   javaVersion: number;
   memoryMb: number;
@@ -84,7 +84,12 @@ export interface SaveOutcome {
 
 /** Rust: `core/create.rs` (`CreateStep`). */
 export type CreateStep =
-  "preparing" | "downloadingJava" | "downloadingServer" | "finalizing";
+  | "preparing"
+  | "downloadingJava"
+  | "downloadingServer"
+  /** Forge and NeoForge only. */
+  | "installingLoader"
+  | "finalizing";
 
 /** Payload of the `create-progress` event. */
 export interface CreateProgress {
@@ -185,6 +190,7 @@ export type AppErrorCode =
   | "alreadyRunning"
   | "notRunning"
   | "eulaNotAccepted"
+  | "loaderInstall"
   | "missingFiles"
   | "invalidInput"
   | "invalidPlayerName"

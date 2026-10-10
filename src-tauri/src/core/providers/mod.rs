@@ -8,6 +8,9 @@
 //! branch in the two `match` below.
 
 pub mod fabric;
+pub mod forge;
+pub mod installer;
+pub mod neoforge;
 pub mod paper;
 pub mod vanilla;
 
@@ -22,6 +25,17 @@ pub enum Loader {
     Vanilla,
     Paper,
     Fabric,
+    Neoforge,
+    Forge,
+}
+
+/// What the downloaded jar is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JarKind {
+    /// Started as is (`server.jar`).
+    Server,
+    /// Official installer, run once at creation (`installer.rs`): Forge, NeoForge.
+    Installer,
 }
 
 /// A server jar ready to be downloaded.
@@ -30,8 +44,9 @@ pub struct ServerJar {
     pub url: String,
     /// `None` when the provider does not publish a hash (Fabric).
     pub checksum: Option<Checksum>,
-    /// Paper build number or Fabric loader version (`None` for Vanilla).
+    /// Paper build, Fabric loader, Forge or NeoForge version (`None` for Vanilla).
     pub loader_version: Option<String>,
+    pub kind: JarKind,
 }
 
 pub async fn list_versions(http: &reqwest::Client, loader: Loader) -> AppResult<Vec<String>> {
@@ -39,17 +54,24 @@ pub async fn list_versions(http: &reqwest::Client, loader: Loader) -> AppResult<
         Loader::Vanilla => vanilla::list_versions(http).await,
         Loader::Paper => paper::list_versions(http).await,
         Loader::Fabric => fabric::list_versions(http).await,
+        Loader::Neoforge => neoforge::list_versions(http).await,
+        Loader::Forge => forge::list_versions(http).await,
     }
 }
 
+/// `loader_version` pins the loader (modpacks need the exact one they were
+/// made with); `None` takes the latest stable one.
 pub async fn server_jar(
     http: &reqwest::Client,
     loader: Loader,
     mc_version: &str,
+    loader_version: Option<&str>,
 ) -> AppResult<ServerJar> {
     match loader {
         Loader::Vanilla => vanilla::server_jar(http, mc_version).await,
         Loader::Paper => paper::server_jar(http, mc_version).await,
-        Loader::Fabric => fabric::server_jar(http, mc_version).await,
+        Loader::Fabric => fabric::server_jar(http, mc_version, loader_version).await,
+        Loader::Neoforge => neoforge::server_jar(http, mc_version, loader_version).await,
+        Loader::Forge => forge::server_jar(http, mc_version, loader_version).await,
     }
 }

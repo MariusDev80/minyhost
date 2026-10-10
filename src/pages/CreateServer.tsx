@@ -73,7 +73,7 @@ export function CreateServerPage() {
       </div>
 
       {create.isPending ? (
-        <CreationProgress />
+        <CreationProgress loader={create.variables.loader} />
       ) : create.isError ? (
         <EmptyState
           icon={AlertCircle}

@@ -1,8 +1,15 @@
 //! Comparing Minecraft versions ("1.21.10" < "1.21.11" < "26.1").
 
+use std::cmp::Ordering;
+
 /// `true` if `version` is `min` or newer.
 pub fn at_least(version: &str, min: &str) -> bool {
     parse(version) >= parse(min)
+}
+
+/// Orders versions numerically, e.g. to sort a list newest first.
+pub fn compare(a: &str, b: &str) -> Ordering {
+    parse(a).cmp(&parse(b))
 }
 
 /// "1.21.10" -> [1, 21, 10]. Missing parts count as 0 ("1.19" == "1.19.0").
@@ -27,5 +34,6 @@ mod tests {
         assert!(at_least("1.19", "1.19.0"));
         assert!(at_least("26.1", "1.21.11"));
         assert!(!at_least("1.12.2", "1.13.2"));
+        assert_eq!(compare("1.21.10", "1.21.9"), Ordering::Greater);
     }
 }

@@ -5,17 +5,22 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { events } from "@/lib/tauri";
 import { t } from "@/i18n";
-import type { CreateProgress, CreateStep } from "@/types";
+import type { CreateProgress, CreateStep, Loader } from "@/types";
+import { usesInstaller } from "./loaders";
 
-const steps: CreateStep[] = [
-  "preparing",
-  "downloadingJava",
-  "downloadingServer",
-  "finalizing",
-];
+function stepsFor(loader: Loader): CreateStep[] {
+  return [
+    "preparing",
+    "downloadingJava",
+    "downloadingServer",
+    ...(usesInstaller(loader) ? (["installingLoader"] as const) : []),
+    "finalizing",
+  ];
+}
 
 /** Step list shown while Rust creates the server (`create-progress` events). */
-export function CreationProgress() {
+export function CreationProgress({ loader }: { loader: Loader }) {
+  const steps = stepsFor(loader);
   const [progress, setProgress] = useState<CreateProgress>({
     step: "preparing",
     percent: null,

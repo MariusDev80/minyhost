@@ -31,15 +31,39 @@ async fn fabric_lifecycle() {
     run_lifecycle(Loader::Fabric).await;
 }
 
+#[tokio::test]
+#[ignore = "downloads Java and Minecraft, takes a few minutes"]
+async fn neoforge_lifecycle() {
+    run_lifecycle(Loader::Neoforge).await;
+}
+
+#[tokio::test]
+#[ignore = "downloads Java and Minecraft, takes a few minutes"]
+async fn forge_lifecycle() {
+    run_lifecycle(Loader::Forge).await;
+}
+
+/// The oldest Forge offered: Java 8 and the legacy `forge-<version>.jar` layout.
+#[tokio::test]
+#[ignore = "downloads Java and Minecraft, takes a few minutes"]
+async fn forge_oldest_lifecycle() {
+    run_lifecycle_of(Loader::Forge, "1.12.2").await;
+}
+
 /// Creates the latest version of `loader`, starts it, sends a command, stops it.
 async fn run_lifecycle(loader: Loader) {
+    let http = http_client().unwrap();
+    let versions = providers::list_versions(&http, loader).await.unwrap();
+    run_lifecycle_of(loader, versions.first().unwrap()).await;
+}
+
+async fn run_lifecycle_of(loader: Loader, mc_version: &str) {
     // Shared between runs so Java is only downloaded once.
     let root = std::env::temp_dir().join("minyhost-e2e");
     let paths = AppPaths::new(root.clone());
     let http = http_client().unwrap();
 
-    let versions = providers::list_versions(&http, loader).await.unwrap();
-    let mc_version = versions.first().unwrap().clone();
+    let mc_version = mc_version.to_string();
     println!(
         "creating a {loader:?} {mc_version} server in {}",
         root.display()

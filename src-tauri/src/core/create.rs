@@ -1,7 +1,8 @@
 //! Server creation pipeline (CLAUDE.md section 5.1).
 //!
 //! Steps, in order: check the form, find the Java version, create the folder,
-//! download Java, download the server jar, write the config files.
+//! download Java, download the server jar (and run the installer for Forge and
+//! NeoForge), write the config files.
 //! If anything fails, the folder is removed so no broken server is left behind.
 
 use std::collections::BTreeMap;
@@ -9,7 +10,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::core::game_settings::{self, GameSettings};
-use crate::core::providers::{self, vanilla, Loader};
+use crate::core::providers::{self, installer, vanilla, JarKind, Loader};
 use crate::core::{eula, instances, java, properties};
 use crate::download::download_file;
 use crate::error::{AppError, AppResult};
@@ -47,6 +48,8 @@ pub enum CreateStep {
     Preparing,
     DownloadingJava,
     DownloadingServer,
+    /// Forge and NeoForge only: their installer runs (1 to 3 minutes).
+    InstallingLoader,
     Finalizing,
 }
 
@@ -61,7 +64,7 @@ pub async fn create_server(
     report(CreateStep::Preparing, None);
 
     let java_version = java::runtime_for(vanilla::required_java(http, &input.mc_version).await?);
-    let jar = providers::server_jar(http, input.loader, &input.mc_version).await?;
+    let jar = providers::server_jar(http, input.loader, &input.mc_version, None).await?;
 
     let existing = instances::list(paths)?;
     let taken_ids: Vec<String> = existing.iter().map(|i| i.id.clone()).collect();
@@ -86,20 +89,28 @@ pub async fn create_server(
 
     let result = async {
         report(CreateStep::DownloadingJava, Some(0));
-        java::ensure_installed(http, paths, java_version, |percent| {
+        let java = java::ensure_installed(http, paths, java_version, |percent| {
             report(CreateStep::DownloadingJava, Some(percent))
         })
         .await?;
 
         report(CreateStep::DownloadingServer, Some(0));
+        let jar_file = match jar.kind {
+            JarKind::Server => server_files::JAR,
+            JarKind::Installer => installer::INSTALLER_JAR,
+        };
         download_file(
             http,
             &jar.url,
-            &dir.join(server_files::JAR),
+            &dir.join(jar_file),
             jar.checksum.as_ref(),
             |percent| report(CreateStep::DownloadingServer, Some(percent)),
         )
         .await?;
+        if jar.kind == JarKind::Installer {
+            report(CreateStep::InstallingLoader, None);
+            installer::run(&java, &dir).await?;
+        }
 
         report(CreateStep::Finalizing, None);
         properties::defaults(instance.port, &instance.name)

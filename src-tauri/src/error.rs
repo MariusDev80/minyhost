@@ -54,6 +54,9 @@ pub enum AppError {
     #[error("the Minecraft EULA has not been accepted")]
     EulaNotAccepted,
 
+    #[error("the loader installer failed:\n{0}")]
+    LoaderInstall(String),
+
     #[error("missing file: {0}")]
     MissingFiles(String),
 
@@ -99,6 +102,7 @@ impl AppError {
             Self::AlreadyRunning => "alreadyRunning",
             Self::NotRunning => "notRunning",
             Self::EulaNotAccepted => "eulaNotAccepted",
+            Self::LoaderInstall(_) => "loaderInstall",
             Self::MissingFiles(_) => "missingFiles",
             Self::InvalidInput(_) => "invalidInput",
             Self::InvalidPlayerName(_) => "invalidPlayerName",

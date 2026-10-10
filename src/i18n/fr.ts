@@ -46,7 +46,15 @@ export const fr = {
     },
     fabric: {
       name: "Fabric",
-      description: "Pour jouer avec des mods.",
+      description: "Mods légers et récents.",
+    },
+    neoforge: {
+      name: "NeoForge",
+      description: "Les gros mods et modpacks récents.",
+    },
+    forge: {
+      name: "Forge",
+      description: "Les mods et modpacks classiques.",
     },
   },
   units: {
@@ -89,6 +97,7 @@ export const fr = {
       preparing: "Préparation",
       downloadingJava: "Téléchargement de Java",
       downloadingServer: "Téléchargement du serveur",
+      installingLoader: "Installation du serveur moddé",
       finalizing: "Finalisation",
     },
     failed: "La création a échoué",
@@ -587,6 +596,8 @@ export const fr = {
     notRunning: "Ce serveur n'est pas démarré.",
     eulaNotAccepted:
       "L'EULA de Minecraft doit être acceptée pour lancer un serveur.",
+    loaderInstall:
+      "L'installation du serveur moddé a échoué. Vérifie ta connexion, puis réessaie.",
     missingFiles:
       "Des fichiers de ce serveur sont manquants. Supprime-le puis recrée-le.",
     invalidInput: "Les informations saisies ne sont pas valides.",
@@ -625,7 +636,7 @@ export const fr = {
           },
           {
             q: "Quel type de serveur choisir ?",
-            a: "• Paper : le plus rapide, compatible avec les plugins. Le bon choix dans la plupart des cas.\n• Vanilla : le serveur officiel de Mojang, sans modification.\n• Fabric : pour jouer avec des mods. Les joueurs ont souvent besoin des mêmes mods de leur côté.\nDans tous les cas, les joueurs doivent utiliser la même version de Minecraft que le serveur.",
+            a: "• Paper : le plus rapide, compatible avec les plugins. Le bon choix dans la plupart des cas.\n• Vanilla : le serveur officiel de Mojang, sans modification.\n• Fabric : pour jouer avec des mods légers et récents.\n• NeoForge et Forge : pour les gros mods et les modpacks (Create, All The Mods…). NeoForge pour les versions récentes, Forge pour les plus anciennes.\nAvec des mods, les joueurs ont souvent besoin des mêmes mods de leur côté.\nDans tous les cas, les joueurs doivent utiliser la même version de Minecraft que le serveur.",
           },
           {
             q: "Combien de mémoire (RAM) donner au serveur ?",
@@ -695,7 +706,7 @@ export const fr = {
           },
           {
             q: "Mes amis n'arrivent pas à se connecter. Que vérifier ?",
-            a: "• Le serveur est démarré et la carte affiche « Ouvert sur Internet ».\n• Ils utilisent exactement l'adresse affichée (copie-la avec le bouton).\n• Leur pseudo est dans la whitelist.\n• Ils ont la même version de Minecraft que le serveur (et les mêmes mods avec Fabric).\n• Pour un tunnel tout neuf, attends une minute.\n• Teste toi-même l'adresse depuis ce PC : si ça marche chez toi mais pas chez eux, le problème vient de leur côté (version, pseudo).\n• En dernier recours : redémarre le serveur, ou ferme puis rouvre l'accès Internet (l'adresse changera).",
+            a: "• Le serveur est démarré et la carte affiche « Ouvert sur Internet ».\n• Ils utilisent exactement l'adresse affichée (copie-la avec le bouton).\n• Leur pseudo est dans la whitelist.\n• Ils ont la même version de Minecraft que le serveur (et les mêmes mods s'il y en a).\n• Pour un tunnel tout neuf, attends une minute.\n• Teste toi-même l'adresse depuis ce PC : si ça marche chez toi mais pas chez eux, le problème vient de leur côté (version, pseudo).\n• En dernier recours : redémarre le serveur, ou ferme puis rouvre l'accès Internet (l'adresse changera).",
           },
           {
             q: "Comment savoir quel agent playit.gg est celui de MinyHost ?",
