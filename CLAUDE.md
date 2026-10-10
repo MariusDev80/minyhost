@@ -57,7 +57,6 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
 .
 ├── CLAUDE.md
 ├── README.md
-├── ROADMAP.md
 ├── package.json
 ├── vite.config.ts
 ├── tailwind.config.ts
@@ -67,15 +66,17 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
 │   ├── components/
 │   │   ├── ui/                   # Composants shadcn/ui
 │   │   ├── layout/               # Sidebar, TitleBar, PageHeader
-│   │   ├── server/               # ServerCard, Console, StatusBadge…
+│   │   ├── server/               # ServerCard, Console, StatusBadge, ModpackForm…
+│   │   ├── content/              # Mods, plugins, datapacks (recherche, liste)
 │   │   └── tunnel/               # Accès Internet (playit.gg)
-│   ├── pages/                    # Home, CreateServer, ServerDetail, Settings, Help (FAQ)
+│   ├── pages/                    # Home, CreateServer, ServerDetail, AddContent, Settings, Help (FAQ)
 │   ├── hooks/                    # useServers, useVersions… (TanStack Query)
 │   ├── stores/                   # Stores Zustand
 │   ├── lib/
 │   │   ├── tauri.ts              # Wrappers typés autour de invoke/listen
 │   │   ├── errors.ts             # Erreur Rust -> message lisible (i18n)
 │   │   ├── skin.ts               # Lecture d'un skin (tête du joueur)
+│   │   ├── content.ts            # Contenu accepté par type de serveur
 │   │   └── utils.ts
 │   ├── i18n/                     # Textes de l'interface : fr.ts (référence), en.ts…
 │   └── types/                    # Types partagés avec Rust
@@ -91,7 +92,12 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
         │   ├── instances.rs      # CRUD des serveurs
         │   ├── create.rs         # Pipeline de création (5.1)
         │   ├── java.rs           # Détection / téléchargement des JRE
-        │   ├── providers/        # vanilla.rs, paper.rs, fabric.rs
+        │   ├── providers/        # vanilla, paper, fabric, neoforge, forge
+        │   │   └── installer.rs  # Installeur Forge/NeoForge, arguments de lancement
+        │   ├── content/          # Mods, plugins, datapacks (5.8)
+        │   │   ├── modrinth.rs
+        │   │   ├── curseforge.rs # Clé API injectée au build
+        │   │   └── modpack.rs    # Création depuis un modpack
         │   ├── process.rs        # Lancement, arrêt, console
         │   ├── properties.rs     # Lecture / écriture server.properties
         │   ├── eula.rs           # eula.txt
@@ -122,16 +128,19 @@ Application **Windows** open-source qui permet à n'importe quel joueur de **cr�
 %APPDATA%/MinyHost/
 ├── settings.json                 # Préférences globales
 ├── playit.json                   # Clé et nom de l'agent playit.gg du compte lié (5.7)
+├── downloads/                    # Archives de modpacks pendant une création (temporaire)
 ├── java/
 │   ├── 21/                       # JRE Temurin 21
 │   └── 17/
 └── servers/
     └── <id>/
         ├── instance.json         # Métadonnées de l'instance
-        ├── server.jar
+        ├── content.json          # Origine des mods/plugins/datapacks installés par MinyHost
+        ├── server.jar            # Forge 1.17+ / NeoForge : libraries/ + run.bat à la place
         ├── eula.txt
         ├── server.properties
-        ├── world/
+        ├── mods/ ou plugins/
+        ├── world/                # world/datapacks/
         ├── logs/
         └── backups/
 ```
@@ -149,7 +158,8 @@ Exemple de `instance.json` :
   "port": 25565,
   "createdAt": "2026-10-05T12:00:00Z",
   "pendingGameRules": { "keep_inventory": true },
-  "playitTunnelId": "3f1c…"
+  "playitTunnelId": "3f1c…",
+  "modpack": { "source": "modrinth", "projectId": "…", "versionId": "…", "title": "…", "versionNumber": "1.8.1", "pageUrl": "…", "dependency": false }
 }
 ```
 
@@ -162,16 +172,22 @@ Les gamerules vivent dans le monde, qui est la source de vérité : MinyHost les
 ## 5. Déroulement des processus
 
 ### 5.1 Création d'un serveur
-1. L'utilisateur ouvre « Créer un serveur » et choisit : nom, type (Vanilla / Paper / Fabric), version Minecraft, RAM.
+1. L'utilisateur ouvre « Créer un serveur » et choisit : nom, type (Vanilla / Paper / Fabric / NeoForge / Forge), version Minecraft, RAM.
 2. Le frontend charge les versions disponibles via `list_versions(loader)` (mis en cache par TanStack Query).
 3. À la validation, appel de `create_server(config)` :
    1. Génération d'un `id` unique et création du dossier `servers/<id>/`.
    2. Détermination de la version de Java requise (voir 5.2).
    3. Téléchargement du JRE s'il est absent.
-   4. Téléchargement du jar serveur auprès du bon fournisseur, **avec vérification du hash**.
+   4. Téléchargement du jar serveur auprès du bon fournisseur, **avec vérification du hash**. Forge et NeoForge fournissent un installeur (SHA-1 publié sur leur Maven), lancé avec `--installServer` (`providers/installer.rs`).
    5. Écriture de `instance.json` et d'un `server.properties` par défaut (`white-list=true`, `online-mode=true`, port libre).
 4. Rust émet des événements `create-progress` (étape + pourcentage) affichés dans une barre de progression.
 5. **L'EULA de Mojang** est présentée à l'utilisateur avec un lien. `eula.txt` n'est écrit à `true` qu'après son acceptation explicite.
+
+**Depuis un modpack** (`create_server_from_modpack`, `core/content/modpack.rs`) : l'archive est téléchargée d'abord dans `downloads/`, car elle fixe la version de Minecraft et la version exacte du loader. Puis le pipeline habituel, et enfin les fichiers du pack :
+- Modrinth (`.mrpack`) : fichiers de `modrinth.index.json` sauf `env.server = unsupported`, téléchargés uniquement depuis les domaines autorisés par le format, SHA-1 vérifié, puis `overrides/` et `server-overrides/`.
+- CurseForge : le server pack de l'auteur s'il existe (sans ses scripts, jars racine ni `libraries/`), sinon le `manifest.json` du pack client moins les fichiers marqués « Client » seulement. Les fichiers dont l'auteur interdit la distribution sont listés pour un téléchargement manuel.
+- Les chemins des archives ne sont jamais crus sur parole (pas de sortie du dossier du serveur). Un `server.properties` fourni par le pack est gardé, mais `white-list`, `enforce-whitelist`, `online-mode`, le port et le motd sont toujours réappliqués.
+- Quilt n'est pas pris en charge. NeoForge 1.20.1 (fork de Forge) est installé comme Forge.
 
 ### 5.2 Choix de Java
 La source de vérité est le champ `javaVersion.majorVersion` du fichier de version Mojang (`providers/vanilla.rs`, `required_java`), utilisé pour tous les types de serveur. Il est arrondi à la LTS Temurin supérieure (`java.rs`, `runtime_for`). À titre indicatif (vérifié en octobre 2026) :
@@ -192,7 +208,7 @@ Les JRE sont téléchargés depuis l'API Adoptium (Temurin) et stockés dans `ja
    ```
    <java>/bin/java -Xms<ram> -Xmx<ram> -jar server.jar nogui
    ```
-   avec le dossier du serveur comme répertoire de travail et sans fenêtre console (`CREATE_NO_WINDOW` sous Windows).
+   Pour Forge 1.17+ et NeoForge, `-jar server.jar` est remplacé par les arguments de la dernière ligne `java` du `run.bat` généré par l'installeur (`@libraries/…/win_args.txt`). Avec le dossier du serveur comme répertoire de travail et sans fenêtre console (`CREATE_NO_WINDOW` sous Windows).
 3. Rust lit `stdout` / `stderr` ligne par ligne et émet un événement `console-line` `{ id, line, stream }`.
 4. Le statut passe par `starting` → `running` (détection de la ligne `Done (...)! For help, type "help"`) → `stopping` → `stopped`. Chaque changement émet `server-status`.
 5. Un seul processus par instance. Le registre des processus actifs est tenu côté Rust (état partagé Tauri).
@@ -224,6 +240,15 @@ Les JRE sont téléchargés depuis l'API Adoptium (Temurin) et stockés dans `ja
   - Les crates sont épinglées sur un tag Git du dépôt `playit-cloud/playit-agent` (les versions crates.io sont en retard) : les mettre à jour avec les releases de l'agent.
 - Bouton « Copier l'adresse » dans tous les cas.
 
+### 5.8 Mods, plugins et datapacks
+- Selon le type de serveur (`content::kinds_for`) : datapacks pour tous, plugins pour Paper (Paper, Spigot, Bukkit), mods pour Fabric / NeoForge / Forge. Les résultats sont filtrés sur la version de Minecraft et le type ; les mods uniquement client sont exclus (`server_side` sur Modrinth).
+- Installation de la dernière version compatible (release de préférence) et de ses dépendances requises. Réinstaller un projet le met à jour ; une dépendance déjà présente est laissée telle quelle.
+- Les dossiers (`mods/`, `plugins/`, `<level-name>/datapacks/`) font foi : un fichier ajouté à la main apparaît aussi. `content.json` ne fait que mémoriser l'origine des fichiers installés par MinyHost.
+- Désactiver = renommer en `.disabled` (mods et plugins seulement).
+- Le serveur doit être arrêté pour modifier son contenu (fichiers verrouillés sous Windows, et pris en compte seulement au démarrage).
+- Les icônes passent par Rust (`content_icon`, hôtes autorisés uniquement) : le frontend n'accède pas au réseau.
+- **CurseForge** exige une clé API (`x-api-key`), demandée sur console.curseforge.com. Elle est lue à la compilation depuis la variable `CURSEFORGE_API_KEY` (secret GitHub en CI) et n'est jamais commitée ; sans elle, CurseForge est masqué. On respecte `allowModDistribution` : pas de contournement par le CDN.
+
 ---
 
 ## 6. APIs externes
@@ -233,10 +258,12 @@ Les JRE sont téléchargés depuis l'API Adoptium (Temurin) et stockés dans `ja
 | Versions Minecraft + jar vanilla | `https://piston-meta.mojang.com/mc/game/version_manifest_v2.json` |
 | Paper | API PaperMC (`fill.papermc.io`, v3) |
 | Fabric | `https://meta.fabricmc.net/v2/` |
+| NeoForge | `https://maven.neoforged.net` (`/api/maven/versions/releases/net/neoforged/neoforge`) |
+| Forge | `https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json`, `maven.minecraftforge.net` |
 | Java (Temurin) | `https://api.adoptium.net/v3/` |
 | Joueurs (UUID, skins) | `api.mojang.com`, `sessionserver.mojang.com`, `textures.minecraft.net` |
 | Tunnel Internet | `https://api.playit.gg` (via `playit-api-client`) |
-| Mods / plugins (phase 4) | `https://api.modrinth.com/v2/` |
+| Mods, plugins, datapacks, modpacks | `https://api.modrinth.com/v2/`, `https://api.curseforge.com/v1/` (clé API) |
 
 Règles :
 - Toujours envoyer un **User-Agent** identifiant l'app (`MinyHost/<version> (github.com/<user>/<repo>)`), exigé notamment par Modrinth.
@@ -262,12 +289,10 @@ Règles :
 
 - **Phase 0 — Setup** : dépôt, licence, projet Tauri qui démarre, Tailwind + shadcn/ui installés.
 - **Phase 1 — Design system** : palette, typo, layout avec sidebar, composants de base.
-- **Phase 2 — MVP** : création Vanilla/Paper/Fabric, Java automatique, démarrage/arrêt, console, liste des serveurs, gestion d'erreurs.
+- **Phase 2 — MVP** : création Vanilla/Paper/Fabric (puis NeoForge/Forge), Java automatique, démarrage/arrêt, console, liste des serveurs, gestion d'erreurs.
 - **Phase 3 — Accès réseau** : IP locale, pare-feu, tunnel, copie d'adresse.
-- **Phase 4 — Confort** : backups, éditeur de propriétés, whitelist, joueurs connectés, mods/plugins via Modrinth, auto-update.
+- **Phase 4 — Confort** : backups, éditeur de propriétés, whitelist, joueurs connectés, mods/plugins/datapacks et modpacks via Modrinth et CurseForge (fait), auto-update.
 - **Phase 5 — Publication** : README, CI de release, signature de l'exécutable, CONTRIBUTING, templates d'issues.
-
-Le détail des tâches est dans `ROADMAP.md`.
 
 ---
 
@@ -276,7 +301,7 @@ Le détail des tâches est dans `ROADMAP.md`.
 ```bash
 npm install               # Dépendances frontend
 npm run tauri dev         # Lancer l'app en développement
-npm run tauri build       # Construire l'installeur
+npm run tauri build       # Construire l'installeur (CURSEFORGE_API_KEY=… pour activer CurseForge)
 npx shadcn@latest add <composant>
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo test --manifest-path src-tauri/Cargo.toml -- --ignored   # Bout en bout (télécharge Java + serveurs)
