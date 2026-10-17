@@ -2,7 +2,7 @@
 
 use serde::Deserialize;
 
-use super::ServerJar;
+use super::{JarKind, ServerJar};
 use crate::download::{get_json, Checksum};
 use crate::error::{AppError, AppResult};
 
@@ -77,5 +77,6 @@ pub async fn server_jar(http: &reqwest::Client, mc_version: &str) -> AppResult<S
         url: download.url.clone(),
         checksum: Some(Checksum::Sha256(download.checksums.sha256.clone())),
         loader_version: Some(build.id.to_string()),
+        kind: JarKind::Server,
     })
 }

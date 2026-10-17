@@ -55,6 +55,7 @@ pub fn run() {
                 http: download::http_client()?,
                 processes,
                 tunnels,
+                content_lock: Default::default(),
             });
             Ok(())
         })
@@ -62,6 +63,7 @@ pub fn run() {
             commands::servers::list_servers,
             commands::servers::list_versions,
             commands::servers::create_server,
+            commands::servers::create_server_from_modpack,
             commands::servers::delete_server,
             commands::folders::servers_folder_path,
             commands::folders::open_servers_folder,
@@ -87,6 +89,14 @@ pub fn run() {
             commands::tunnel::recheck_playit_agent,
             commands::tunnel::enable_internet_access,
             commands::tunnel::disable_internet_access,
+            commands::content::content_sources,
+            commands::content::search_content,
+            commands::content::content_icon,
+            commands::content::list_modpack_versions,
+            commands::content::list_content,
+            commands::content::install_content,
+            commands::content::remove_content,
+            commands::content::set_content_enabled,
         ])
         .on_window_event(on_window_event)
         .run(tauri::generate_context!());

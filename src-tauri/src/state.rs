@@ -12,4 +12,7 @@ pub struct AppState {
     pub processes: ProcessManager,
     /// Internet access through playit.gg.
     pub tunnels: TunnelManager,
+    /// Held while mods, plugins or datapacks are being changed, so two
+    /// installs never write `content.json` at the same time.
+    pub content_lock: tokio::sync::Mutex<()>,
 }

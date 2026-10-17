@@ -2,7 +2,7 @@
 // (`#[serde(rename_all = "camelCase")]`). The Rust file is noted on each type.
 
 /** Server type. Rust: `core/providers/mod.rs` (`Loader`). */
-export type Loader = "vanilla" | "paper" | "fabric";
+export type Loader = "vanilla" | "paper" | "fabric" | "neoforge" | "forge";
 
 /** Lifecycle of a server process. Rust: `core/process.rs` (`ServerStatus`). */
 export type ServerStatus = "starting" | "running" | "stopping" | "stopped";
@@ -13,7 +13,7 @@ export interface Instance {
   name: string;
   mcVersion: string;
   loader: Loader;
-  /** Paper build or Fabric loader version, `null` for Vanilla. */
+  /** Paper build, Fabric loader, Forge or NeoForge version; `null` for Vanilla. */
   loaderVersion: string | null;
   javaVersion: number;
   memoryMb: number;
@@ -22,6 +22,8 @@ export interface Instance {
   createdAt: string;
   /** playit.gg tunnel, set while Internet access is on. */
   playitTunnelId?: string;
+  /** Modpack the server was created from. */
+  modpack?: ContentMeta;
 }
 
 /** An instance plus its live status. Rust: `commands/servers.rs` (`ServerInfo`). */
@@ -40,6 +42,34 @@ export interface NewServer {
   eulaAccepted: boolean;
   /** Optional: only the settings that differ from their default. */
   settings?: GameSettings;
+}
+
+/** Creation from a modpack. Rust: `core/create.rs` (`NewModpackServer`). */
+export interface NewModpackServer {
+  name: string;
+  memoryMb: number;
+  eulaAccepted: boolean;
+  source: ContentSource;
+  projectId: string;
+  /** Modrinth version id, or CurseForge file id. */
+  versionId: string;
+}
+
+/** Rust: `core/create.rs` (`ModpackCreated`). */
+export interface ModpackCreated {
+  instance: Instance;
+  /** Files to download by hand before the server can start. */
+  manual: ManualDownload[];
+}
+
+/** One version of a modpack. Rust: `core/content/modpack.rs` (`ModpackVersion`). */
+export interface ModpackVersion {
+  id: string;
+  name: string;
+  mcVersions: string[];
+  loaders: string[];
+  /** Made for a loader MinyHost can host. */
+  supported: boolean;
 }
 
 /** Value of a game setting. Rust: `core/game_settings.rs` (`SettingValue`). */
@@ -84,7 +114,16 @@ export interface SaveOutcome {
 
 /** Rust: `core/create.rs` (`CreateStep`). */
 export type CreateStep =
-  "preparing" | "downloadingJava" | "downloadingServer" | "finalizing";
+  | "preparing"
+  /** Modpacks only. */
+  | "downloadingModpack"
+  | "downloadingJava"
+  | "downloadingServer"
+  /** Forge and NeoForge only. */
+  | "installingLoader"
+  /** Modpacks only. */
+  | "downloadingContent"
+  | "finalizing";
 
 /** Payload of the `create-progress` event. */
 export interface CreateProgress {
@@ -172,6 +211,77 @@ export interface TunnelState {
   agentName: string | null;
 }
 
+/** Rust: `core/content/mod.rs` (`ContentKind`). */
+export type ContentKind = "mod" | "plugin" | "datapack" | "modpack";
+
+/** Rust: `core/content/mod.rs` (`Source`). */
+export type ContentSource = "modrinth" | "curseforge";
+
+/** Sources offered by this build. Rust: `commands/content.rs`. */
+export interface ContentSources {
+  /** Only when the app was built with a CurseForge API key. */
+  curseforge: boolean;
+}
+
+/** One search result. Rust: `core/content/mod.rs` (`ContentHit`). */
+export interface ContentHit {
+  source: ContentSource;
+  projectId: string;
+  title: string;
+  description: string;
+  author: string;
+  iconUrl: string | null;
+  downloads: number;
+  pageUrl: string;
+}
+
+/** Rust: `core/content/mod.rs` (`SearchPage`). */
+export interface SearchPage {
+  hits: ContentHit[];
+  /** Results of the whole search. */
+  total: number;
+  /** Where the next page starts, `null` on the last one. */
+  nextOffset: number | null;
+}
+
+/** Origin of a file installed by MinyHost. Rust: `ContentMeta`. */
+export interface ContentMeta {
+  source: ContentSource;
+  projectId: string;
+  versionId: string;
+  title: string;
+  versionNumber: string;
+  iconUrl?: string;
+  pageUrl: string;
+  /** Installed because another project needs it. */
+  dependency: boolean;
+}
+
+/** A mod, plugin or datapack of a server. Rust: `InstalledContent`. */
+export interface InstalledContent {
+  kind: ContentKind;
+  /** Without the `.disabled` suffix. */
+  fileName: string;
+  enabled: boolean;
+  /** `null` for files added by hand. */
+  meta: ContentMeta | null;
+}
+
+/** A file to download from CurseForge's website. Rust: `ManualDownload`. */
+export interface ManualDownload {
+  title: string;
+  fileName: string;
+  pageUrl: string;
+}
+
+/** Rust: `core/content/mod.rs` (`InstallOutcome`). */
+export interface InstallOutcome {
+  installed: string[];
+  /** Dependencies with no version for this server. */
+  unavailable: string[];
+  manual: ManualDownload[];
+}
+
 /** Error returned by every command. Rust: `error.rs` (`AppError::code`). */
 export type AppErrorCode =
   | "network"
@@ -184,7 +294,9 @@ export type AppErrorCode =
   | "portInUse"
   | "alreadyRunning"
   | "notRunning"
+  | "mustBeStopped"
   | "eulaNotAccepted"
+  | "loaderInstall"
   | "missingFiles"
   | "invalidInput"
   | "invalidPlayerName"
@@ -193,7 +305,11 @@ export type AppErrorCode =
   | "playitLimit"
   | "playitUnverified"
   | "playitAgentLimit"
-  | "playit";
+  | "playit"
+  | "contentUnavailable"
+  | "curseforgeUnavailable"
+  | "modpackUnsupported"
+  | "distributionBlocked";
 
 export interface AppError {
   code: AppErrorCode;

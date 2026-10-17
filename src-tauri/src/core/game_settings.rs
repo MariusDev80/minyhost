@@ -352,7 +352,7 @@ pub fn read(
 }
 
 /// The world folder (`level-name` in server.properties, `world` by default).
-fn world_dir(server_dir: &Path, properties: &Properties) -> PathBuf {
+pub fn world_dir(server_dir: &Path, properties: &Properties) -> PathBuf {
     let name = properties
         .get_text("level-name")
         .filter(|name| !name.trim().is_empty())
@@ -474,6 +474,7 @@ mod tests {
             created_at: String::new(),
             pending_game_rules: BTreeMap::new(),
             playit_tunnel_id: None,
+            modpack: None,
         }
     }
 

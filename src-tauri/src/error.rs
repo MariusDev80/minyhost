@@ -51,8 +51,14 @@ pub enum AppError {
     #[error("server is not running")]
     NotRunning,
 
+    #[error("the server must be stopped first")]
+    MustBeStopped,
+
     #[error("the Minecraft EULA has not been accepted")]
     EulaNotAccepted,
+
+    #[error("the loader installer failed:\n{0}")]
+    LoaderInstall(String),
 
     #[error("missing file: {0}")]
     MissingFiles(String),
@@ -80,6 +86,18 @@ pub enum AppError {
 
     #[error("playit.gg error: {0}")]
     Playit(String),
+
+    #[error("no version of {0} for this server")]
+    ContentUnavailable(String),
+
+    #[error("this build has no CurseForge API key, or CurseForge refused it")]
+    CurseforgeUnavailable,
+
+    #[error("modpacks for {0} are not supported")]
+    ModpackUnsupported(String),
+
+    #[error("{0} can only be downloaded from CurseForge's website")]
+    DistributionBlocked(String),
 }
 
 impl AppError {
@@ -98,7 +116,9 @@ impl AppError {
             Self::PortInUse(_) => "portInUse",
             Self::AlreadyRunning => "alreadyRunning",
             Self::NotRunning => "notRunning",
+            Self::MustBeStopped => "mustBeStopped",
             Self::EulaNotAccepted => "eulaNotAccepted",
+            Self::LoaderInstall(_) => "loaderInstall",
             Self::MissingFiles(_) => "missingFiles",
             Self::InvalidInput(_) => "invalidInput",
             Self::InvalidPlayerName(_) => "invalidPlayerName",
@@ -108,6 +128,10 @@ impl AppError {
             Self::PlayitUnverified => "playitUnverified",
             Self::PlayitAgentLimit => "playitAgentLimit",
             Self::Playit(_) => "playit",
+            Self::ContentUnavailable(_) => "contentUnavailable",
+            Self::CurseforgeUnavailable => "curseforgeUnavailable",
+            Self::ModpackUnsupported(_) => "modpackUnsupported",
+            Self::DistributionBlocked(_) => "distributionBlocked",
         }
     }
 }

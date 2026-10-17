@@ -3,7 +3,7 @@
 use serde::Serialize;
 use tauri::{AppHandle, State};
 
-use crate::core::create::{self, NewServer};
+use crate::core::create::{self, ModpackCreated, NewModpackServer, NewServer};
 use crate::core::instances::{self, Instance};
 use crate::core::process::ServerStatus;
 use crate::core::providers::{self, Loader};
@@ -57,6 +57,19 @@ pub async fn create_server(
     input: NewServer,
 ) -> AppResult<Instance> {
     create::create_server(&state.http, &state.paths, input, |progress| {
+        events::emit_create_progress(&app, progress)
+    })
+    .await
+}
+
+/// Long-running: reports its progress through the `create-progress` event.
+#[tauri::command]
+pub async fn create_server_from_modpack(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    input: NewModpackServer,
+) -> AppResult<ModpackCreated> {
+    create::create_from_modpack(&state.http, &state.paths, input, |progress| {
         events::emit_create_progress(&app, progress)
     })
     .await

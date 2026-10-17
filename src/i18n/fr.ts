@@ -34,6 +34,7 @@ export const fr = {
     edit: "Modifier",
     send: "Envoyer",
     restart: "Redémarrer",
+    close: "Fermer",
   },
   loaders: {
     vanilla: {
@@ -46,11 +47,21 @@ export const fr = {
     },
     fabric: {
       name: "Fabric",
-      description: "Pour jouer avec des mods.",
+      description: "Mods légers et récents.",
+    },
+    neoforge: {
+      name: "NeoForge",
+      description: "Les gros mods et modpacks récents.",
+    },
+    forge: {
+      name: "Forge",
+      description: "Les mods et modpacks classiques.",
     },
   },
   units: {
     memory: (mb: number) => `${mb / 1024} Go`,
+    downloads: (count: number) =>
+      `${new Intl.NumberFormat("fr", { notation: "compact", maximumFractionDigits: 1 }).format(count)} téléchargements`,
   },
   home: {
     title: "Bienvenue",
@@ -83,12 +94,27 @@ export const fr = {
     eulaLink: "Lire l'EULA",
     eulaHint: "Obligatoire pour héberger un serveur Minecraft.",
     submit: "Créer le serveur",
+    modes: {
+      blank: "Nouveau serveur",
+      modpack: "Depuis un modpack",
+    },
+    pick: "Choisir",
+    changeModpack: "Changer",
+    modpackVersion: "Version du modpack",
+    modpackUnsupported:
+      "Aucune version de ce modpack n'est prise en charge (Quilt n'est pas encore géré).",
+    notSupported: "non pris en charge",
+    modpackMemoryHint:
+      "Les modpacks demandent plus de mémoire : 6 Go conviennent à la plupart, 8 Go et plus pour les plus gros.",
     progressTitle: "Création du serveur",
     progressHint: "La première fois, cela peut prendre quelques minutes.",
     steps: {
       preparing: "Préparation",
+      downloadingModpack: "Téléchargement du modpack",
       downloadingJava: "Téléchargement de Java",
       downloadingServer: "Téléchargement du serveur",
+      installingLoader: "Installation du serveur moddé",
+      downloadingContent: "Téléchargement des mods",
       finalizing: "Finalisation",
     },
     failed: "La création a échoué",
@@ -571,6 +597,74 @@ export const fr = {
     description: "MinyHost sauvegarde les mondes avant de se fermer.",
   },
   // One message per `AppErrorCode` (see `src/types/index.ts`).
+  content: {
+    tab: "Contenu",
+    title: {
+      vanilla: "Datapacks",
+      paper: "Plugins et datapacks",
+      fabric: "Mods et datapacks",
+      neoforge: "Mods et datapacks",
+      forge: "Mods et datapacks",
+    },
+    description: {
+      vanilla:
+        "Les datapacks ajoutent des recettes, des mécaniques ou des structures. Les joueurs n'ont rien à installer.",
+      paper:
+        "Les plugins ajoutent des fonctionnalités au serveur. Les joueurs n'ont rien à installer.",
+      fabric:
+        "Les mods changent le jeu. Les joueurs doivent souvent installer les mêmes de leur côté.",
+      neoforge:
+        "Les mods changent le jeu. Les joueurs doivent souvent installer les mêmes de leur côté.",
+      forge:
+        "Les mods changent le jeu. Les joueurs doivent souvent installer les mêmes de leur côté.",
+    },
+    kinds: {
+      mod: "Mods",
+      plugin: "Plugins",
+      datapack: "Datapacks",
+      modpack: "Modpacks",
+    },
+    /** Folder of the server where each kind goes. */
+    folders: {
+      mod: "mods",
+      plugin: "plugins",
+      datapack: "world/datapacks",
+      modpack: "",
+    },
+    sources: {
+      modrinth: "Modrinth",
+      curseforge: "CurseForge",
+    },
+    add: "Ajouter",
+    addTitle: "Ajouter du contenu",
+    compatibleHint: (server: string) =>
+      `Seul le contenu compatible avec ${server} est affiché.`,
+    stopFirst:
+      "Arrête le serveur pour ajouter, désactiver ou supprimer du contenu.",
+    empty: "Rien d'installé pour l'instant.",
+    dependency: "Dépendance",
+    manual: "Ajouté à la main",
+    enable: (name: string) => `Activer « ${name} »`,
+    remove: (name: string) => `Supprimer « ${name} »`,
+    openPage: "Voir la page",
+    searchPlaceholder: (kind: string) =>
+      `Rechercher des ${kind.toLowerCase()}…`,
+    by: (author: string) => `par ${author}`,
+    noResults: "Aucun résultat compatible.",
+    searchError: "Impossible de charger les résultats. Vérifie ta connexion.",
+    loadMore: "Afficher plus",
+    install: "Installer",
+    update: "Mettre à jour",
+    installed: (name: string, dependencies: number) =>
+      dependencies === 0
+        ? `« ${name} » est installé.`
+        : `« ${name} » est installé, avec ${dependencies} dépendance${dependencies > 1 ? "s" : ""}.`,
+    unavailable: (names: string) =>
+      `Introuvable pour cette version du serveur : ${names}. Le contenu installé risque de ne pas fonctionner.`,
+    manualTitle: "Téléchargement manuel nécessaire",
+    manualDescription: (folder: string) =>
+      `Leur auteur n'autorise le téléchargement que depuis le site de CurseForge. Télécharge ces fichiers, puis place-les dans le dossier « ${folder} » du serveur.`,
+  },
   errors: {
     network:
       "Impossible de joindre Internet. Vérifie ta connexion, puis réessaie.",
@@ -585,8 +679,11 @@ export const fr = {
       "Le port de ce serveur est déjà utilisé. Un autre serveur tourne peut-être déjà sur ce PC.",
     alreadyRunning: "Ce serveur est déjà en marche.",
     notRunning: "Ce serveur n'est pas démarré.",
+    mustBeStopped: "Arrête d'abord le serveur.",
     eulaNotAccepted:
       "L'EULA de Minecraft doit être acceptée pour lancer un serveur.",
+    loaderInstall:
+      "L'installation du serveur moddé a échoué. Vérifie ta connexion, puis réessaie.",
     missingFiles:
       "Des fichiers de ce serveur sont manquants. Supprime-le puis recrée-le.",
     invalidInput: "Les informations saisies ne sont pas valides.",
@@ -603,6 +700,14 @@ export const fr = {
       "Ton compte playit.gg a atteint son nombre maximal d'agents. Supprime les anciens agents « MinyHost » sur playit.gg, puis réessaie.",
     playit:
       "playit.gg n'a pas pu traiter la demande. Vérifie ta connexion, puis réessaie.",
+    contentUnavailable:
+      "Aucune version compatible avec ce serveur (version de Minecraft ou type de serveur).",
+    modpackUnsupported:
+      "Ce modpack utilise un type de serveur que MinyHost ne gère pas encore (Quilt par exemple).",
+    distributionBlocked:
+      "L'auteur de ce modpack n'autorise son téléchargement que depuis le site de CurseForge : MinyHost ne peut pas l'installer.",
+    curseforgeUnavailable:
+      "CurseForge n'est pas disponible dans cette version de MinyHost (clé d'accès absente ou refusée). Utilise Modrinth.",
     unknown: "Une erreur inattendue est survenue.",
   },
   // Help page. Answers use "\n" for line breaks (lists, steps).
@@ -625,7 +730,7 @@ export const fr = {
           },
           {
             q: "Quel type de serveur choisir ?",
-            a: "• Paper : le plus rapide, compatible avec les plugins. Le bon choix dans la plupart des cas.\n• Vanilla : le serveur officiel de Mojang, sans modification.\n• Fabric : pour jouer avec des mods. Les joueurs ont souvent besoin des mêmes mods de leur côté.\nDans tous les cas, les joueurs doivent utiliser la même version de Minecraft que le serveur.",
+            a: "• Paper : le plus rapide, compatible avec les plugins. Le bon choix dans la plupart des cas.\n• Vanilla : le serveur officiel de Mojang, sans modification.\n• Fabric : pour jouer avec des mods légers et récents.\n• NeoForge et Forge : pour les gros mods et les modpacks (Create, All The Mods…). NeoForge pour les versions récentes, Forge pour les plus anciennes.\nAvec des mods, les joueurs ont souvent besoin des mêmes mods de leur côté.\nDans tous les cas, les joueurs doivent utiliser la même version de Minecraft que le serveur.",
           },
           {
             q: "Combien de mémoire (RAM) donner au serveur ?",
@@ -671,6 +776,31 @@ export const fr = {
         ],
       },
       {
+        title: "Mods, plugins et modpacks",
+        items: [
+          {
+            q: "Comment ajouter des mods, des plugins ou des datapacks ?",
+            a: "Arrête le serveur, puis ouvre l'onglet Contenu de sa page et clique sur Ajouter. Seul ce qui est compatible avec ta version de Minecraft et ton type de serveur est proposé : des plugins pour Paper, des mods pour Fabric, NeoForge et Forge, des datapacks pour tous. Ce dont un mod a besoin (Fabric API par exemple) est installé avec lui.",
+          },
+          {
+            q: "Comment créer un serveur à partir d'un modpack ?",
+            a: "« Créer un serveur », onglet « Depuis un modpack ». Cherche le modpack, choisis sa version, puis crée le serveur : MinyHost installe la bonne version de Minecraft, le bon type de serveur et tous les mods. Prévois 6 Go de mémoire ou plus.",
+          },
+          {
+            q: "Mes amis doivent-ils installer les mêmes mods ?",
+            a: "Avec des plugins (Paper) ou des datapacks, non : tout se passe sur le serveur. Avec des mods ou un modpack, oui le plus souvent : chaque joueur installe le même modpack (ou les mêmes mods) dans son launcher, par exemple avec l'app Modrinth ou CurseForge.",
+          },
+          {
+            q: "« Téléchargement manuel nécessaire » : pourquoi ?",
+            a: "Certains auteurs n'autorisent le téléchargement de leurs fichiers que depuis le site de CurseForge. MinyHost respecte ce choix : ouvre la page de chaque fichier, télécharge-le, puis place-le dans le dossier « mods » du serveur (bouton « Ouvrir le dossier du serveur »).",
+          },
+          {
+            q: "Comment désactiver ou mettre à jour un mod ?",
+            a: "Serveur arrêté, dans l'onglet Contenu : l'interrupteur active ou désactive un mod ou un plugin, la croix le supprime. Pour le mettre à jour, retrouve-le dans Ajouter et clique sur « Mettre à jour ».",
+          },
+        ],
+      },
+      {
         title: "Jouer avec des amis via Internet (playit.gg)",
         items: [
           {
@@ -695,7 +825,7 @@ export const fr = {
           },
           {
             q: "Mes amis n'arrivent pas à se connecter. Que vérifier ?",
-            a: "• Le serveur est démarré et la carte affiche « Ouvert sur Internet ».\n• Ils utilisent exactement l'adresse affichée (copie-la avec le bouton).\n• Leur pseudo est dans la whitelist.\n• Ils ont la même version de Minecraft que le serveur (et les mêmes mods avec Fabric).\n• Pour un tunnel tout neuf, attends une minute.\n• Teste toi-même l'adresse depuis ce PC : si ça marche chez toi mais pas chez eux, le problème vient de leur côté (version, pseudo).\n• En dernier recours : redémarre le serveur, ou ferme puis rouvre l'accès Internet (l'adresse changera).",
+            a: "• Le serveur est démarré et la carte affiche « Ouvert sur Internet ».\n• Ils utilisent exactement l'adresse affichée (copie-la avec le bouton).\n• Leur pseudo est dans la whitelist.\n• Ils ont la même version de Minecraft que le serveur (et les mêmes mods s'il y en a).\n• Pour un tunnel tout neuf, attends une minute.\n• Teste toi-même l'adresse depuis ce PC : si ça marche chez toi mais pas chez eux, le problème vient de leur côté (version, pseudo).\n• En dernier recours : redémarre le serveur, ou ferme puis rouvre l'accès Internet (l'adresse changera).",
           },
           {
             q: "Comment savoir quel agent playit.gg est celui de MinyHost ?",

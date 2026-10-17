@@ -7,17 +7,10 @@ import { events } from "@/lib/tauri";
 import { t } from "@/i18n";
 import type { CreateProgress, CreateStep } from "@/types";
 
-const steps: CreateStep[] = [
-  "preparing",
-  "downloadingJava",
-  "downloadingServer",
-  "finalizing",
-];
-
 /** Step list shown while Rust creates the server (`create-progress` events). */
-export function CreationProgress() {
+export function CreationProgress({ steps }: { steps: CreateStep[] }) {
   const [progress, setProgress] = useState<CreateProgress>({
-    step: "preparing",
+    step: steps[0],
     percent: null,
   });
   useEffect(() => events.onCreateProgress(setProgress), []);

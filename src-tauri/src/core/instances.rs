@@ -9,6 +9,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::content::ContentMeta;
 use crate::core::game_settings::SettingValue;
 use crate::core::providers::Loader;
 use crate::error::{AppError, AppResult};
@@ -49,6 +50,9 @@ pub struct Instance {
     /// (`core/tunnel.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub playit_tunnel_id: Option<uuid::Uuid>,
+    /// Modpack the server was created from.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modpack: Option<ContentMeta>,
 }
 
 /// All instances, newest first.

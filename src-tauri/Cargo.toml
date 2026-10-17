@@ -1,6 +1,6 @@
 [package]
 name = "minyhost"
-version = "0.1.0"
+version = "0.2.0"
 description = "Héberge ton serveur Minecraft sur ton PC, en quelques clics."
 authors = ["MariusDev80"]
 edition = "2021"

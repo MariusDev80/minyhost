@@ -7,6 +7,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::core::content::Source;
 use crate::core::create::{create_server, NewServer};
 use crate::core::process::{ProcessManager, ServerEvent, ServerStatus, StopOutcome};
 use crate::core::providers::{self, Loader};
@@ -31,15 +32,39 @@ async fn fabric_lifecycle() {
     run_lifecycle(Loader::Fabric).await;
 }
 
+#[tokio::test]
+#[ignore = "downloads Java and Minecraft, takes a few minutes"]
+async fn neoforge_lifecycle() {
+    run_lifecycle(Loader::Neoforge).await;
+}
+
+#[tokio::test]
+#[ignore = "downloads Java and Minecraft, takes a few minutes"]
+async fn forge_lifecycle() {
+    run_lifecycle(Loader::Forge).await;
+}
+
+/// The oldest Forge offered: Java 8 and the legacy `forge-<version>.jar` layout.
+#[tokio::test]
+#[ignore = "downloads Java and Minecraft, takes a few minutes"]
+async fn forge_oldest_lifecycle() {
+    run_lifecycle_of(Loader::Forge, "1.12.2").await;
+}
+
 /// Creates the latest version of `loader`, starts it, sends a command, stops it.
 async fn run_lifecycle(loader: Loader) {
+    let http = http_client().unwrap();
+    let versions = providers::list_versions(&http, loader).await.unwrap();
+    run_lifecycle_of(loader, versions.first().unwrap()).await;
+}
+
+async fn run_lifecycle_of(loader: Loader, mc_version: &str) {
     // Shared between runs so Java is only downloaded once.
     let root = std::env::temp_dir().join("minyhost-e2e");
     let paths = AppPaths::new(root.clone());
     let http = http_client().unwrap();
 
-    let versions = providers::list_versions(&http, loader).await.unwrap();
-    let mc_version = versions.first().unwrap().clone();
+    let mc_version = mc_version.to_string();
     println!(
         "creating a {loader:?} {mc_version} server in {}",
         root.display()
@@ -56,7 +81,110 @@ async fn run_lifecycle(loader: Loader) {
     let instance = create_server(&http, &paths, input, |p| println!("{p:?}"))
         .await
         .unwrap();
+    start_and_stop(&paths, &instance.id).await;
+}
 
+/// The official Cobblemon modpack (Fabric): pinned loader, mods, overrides.
+#[tokio::test]
+#[ignore = "downloads Java, Minecraft and a modpack, takes a few minutes"]
+async fn modrinth_modpack_lifecycle() {
+    run_modpack(
+        Source::Modrinth,
+        "cobblemon-fabric",
+        Loader::Fabric,
+        Some("Cobblemon"),
+    )
+    .await;
+}
+
+#[tokio::test]
+#[ignore = "downloads Java, Minecraft and a modpack, takes a few minutes"]
+async fn modrinth_neoforge_modpack_lifecycle() {
+    run_modpack(
+        Source::Modrinth,
+        "create-oneblock",
+        Loader::Neoforge,
+        Some("Create"),
+    )
+    .await;
+}
+
+#[tokio::test]
+#[ignore = "downloads Java, Minecraft and a modpack, takes a few minutes"]
+async fn modrinth_forge_modpack_lifecycle() {
+    run_modpack(Source::Modrinth, "slimes-adventure", Loader::Forge, None).await;
+}
+
+/// A CurseForge pack with a server pack (Forge 1.12.2, Java 8).
+#[tokio::test]
+#[ignore = "needs CURSEFORGE_API_KEY, downloads Java, Minecraft and a modpack"]
+async fn curseforge_server_pack_lifecycle() {
+    run_modpack(Source::Curseforge, "296062", Loader::Forge, None).await;
+}
+
+/// A CurseForge pack without a server pack: built from the client manifest.
+#[tokio::test]
+#[ignore = "needs CURSEFORGE_API_KEY, downloads Java, Minecraft and a modpack"]
+async fn curseforge_manifest_modpack_lifecycle() {
+    run_modpack(Source::Curseforge, "1258033", Loader::Fabric, None).await;
+}
+
+/// Creates a server from the latest version of a pack made for `loader`
+/// (CurseForge packs do not always tag their loader).
+async fn run_modpack(source: Source, project: &str, loader: Loader, expected_mod: Option<&str>) {
+    use crate::core::content::{self, modpack};
+    use crate::core::create::{create_from_modpack, NewModpackServer};
+
+    let root = std::env::temp_dir().join("minyhost-e2e");
+    let paths = AppPaths::new(root.clone());
+    let http = http_client().unwrap();
+
+    let loader_name = format!("{loader:?}").to_lowercase();
+    let versions = modpack::versions(&http, source, project).await.unwrap();
+    let version = versions
+        .iter()
+        .find(|v| v.supported && (v.loaders.is_empty() || v.loaders.contains(&loader_name)))
+        .unwrap();
+    println!("creating from {} ({:?})", version.name, version.loaders);
+
+    let input = NewModpackServer {
+        name: "Test Modpack".into(),
+        memory_mb: 4096,
+        eula_accepted: true,
+        source,
+        project_id: project.into(),
+        version_id: version.id.clone(),
+    };
+    let created = create_from_modpack(&http, &paths, input, |p| println!("{p:?}"))
+        .await
+        .unwrap();
+    println!("manual downloads: {:?}", created.manual);
+    if source == Source::Modrinth {
+        assert!(created.manual.is_empty());
+    }
+    let instance = created.instance;
+    assert_eq!(instance.loader, loader);
+    assert!(instance.modpack.is_some());
+
+    let dir = paths.server_dir(&instance.id);
+    let installed = content::list_installed(&dir, instance.loader).unwrap();
+    println!("{} files installed", installed.len());
+    if let Some(expected) = expected_mod {
+        assert!(installed
+            .iter()
+            .any(|item| item.meta.as_ref().is_some_and(|m| m.title == expected)));
+    }
+    assert!(
+        paths.downloads_dir().read_dir().unwrap().next().is_none(),
+        "archive removed"
+    );
+
+    start_and_stop(&paths, &instance.id).await;
+}
+
+/// Starts the server, waits until players can join, sends a command, stops
+/// it, then deletes it.
+async fn start_and_stop(paths: &AppPaths, id: &str) {
     let events = Arc::new(Mutex::new(Vec::new()));
     let sink_events = events.clone();
     let manager = ProcessManager::new(
@@ -69,19 +197,19 @@ async fn run_lifecycle(loader: Loader) {
         }),
     );
 
-    manager.start(&instance.id).await.unwrap();
-    let ready = tokio::time::timeout(Duration::from_secs(180), async {
-        while manager.status(&instance.id).await != ServerStatus::Running {
+    manager.start(id).await.unwrap();
+    let ready = tokio::time::timeout(Duration::from_secs(300), async {
+        while manager.status(id).await != ServerStatus::Running {
             tokio::time::sleep(Duration::from_millis(500)).await;
         }
     })
     .await;
     assert!(ready.is_ok(), "server did not reach Running");
 
-    manager.send_command(&instance.id, "list").await.unwrap();
-    let outcome = manager.stop(&instance.id).await.unwrap();
+    manager.send_command(id, "list").await.unwrap();
+    let outcome = manager.stop(id).await.unwrap();
     assert!(matches!(outcome, StopOutcome::Graceful));
-    assert_eq!(manager.status(&instance.id).await, ServerStatus::Stopped);
+    assert_eq!(manager.status(id).await, ServerStatus::Stopped);
 
     let crashed = events
         .lock()
@@ -90,7 +218,174 @@ async fn run_lifecycle(loader: Loader) {
         .any(|event| matches!(event, ServerEvent::Crashed { .. }));
     assert!(!crashed, "a clean stop must not be reported as a crash");
 
-    std::fs::remove_dir_all(paths.server_dir(&instance.id)).unwrap();
+    std::fs::remove_dir_all(paths.server_dir(id)).unwrap();
+}
+
+/// Search, install with dependencies, update, then plugins and datapacks.
+#[tokio::test]
+#[ignore = "calls the Modrinth API"]
+async fn modrinth_content() {
+    use crate::core::content::{self, ContentKind, Source, Target};
+
+    let http = http_client().unwrap();
+    let dir = std::env::temp_dir().join("minyhost-e2e-content");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let mods = Target {
+        kind: ContentKind::Mod,
+        mc_version: "1.21.1".into(),
+        loader: Loader::Fabric,
+    };
+    let page = content::search(&http, Source::Modrinth, mods.kind, "chunky", Some(&mods), 0)
+        .await
+        .unwrap();
+    let chunky = page.hits.iter().find(|hit| hit.title == "Chunky").unwrap();
+
+    // Chunky needs Fabric API, installed along with it.
+    let outcome = content::install(&http, &dir, Source::Modrinth, &chunky.project_id, &mods)
+        .await
+        .unwrap();
+    println!("{outcome:?}");
+    assert_eq!(outcome.installed.len(), 2);
+    let installed = content::list_installed(&dir, Loader::Fabric).unwrap();
+    assert_eq!(installed.len(), 2);
+    assert!(installed
+        .iter()
+        .any(|item| item.meta.as_ref().unwrap().dependency));
+
+    // Installing again replaces the file, dependencies are left alone.
+    let again = content::install(&http, &dir, Source::Modrinth, &chunky.project_id, &mods)
+        .await
+        .unwrap();
+    assert_eq!(again.installed, vec!["Chunky".to_string()]);
+    assert_eq!(
+        content::list_installed(&dir, Loader::Fabric).unwrap().len(),
+        2
+    );
+
+    // A plugin and a datapack on a Paper server.
+    for (kind, query) in [
+        (ContentKind::Plugin, "chunky"),
+        (ContentKind::Datapack, "veinminer"),
+    ] {
+        let target = Target {
+            kind,
+            mc_version: "1.21.1".into(),
+            loader: Loader::Paper,
+        };
+        let page = content::search(&http, Source::Modrinth, kind, query, Some(&target), 0)
+            .await
+            .unwrap();
+        let hit = page.hits.first().unwrap();
+        content::install(&http, &dir, Source::Modrinth, &hit.project_id, &target)
+            .await
+            .unwrap();
+    }
+    let paper = content::list_installed(&dir, Loader::Paper).unwrap();
+    assert!(paper.iter().any(|item| item.kind == ContentKind::Plugin));
+    assert!(dir.join("world/datapacks").read_dir().unwrap().count() == 1);
+
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+/// What the modpack picker loads: a page of results, then each one's versions.
+#[tokio::test]
+#[ignore = "needs CURSEFORGE_API_KEY, calls the CurseForge API"]
+async fn curseforge_modpack_picker() {
+    use crate::core::content::{self, modpack, ContentKind};
+
+    let http = http_client().unwrap();
+    for offset in [0, 20] {
+        let page = content::search(
+            &http,
+            Source::Curseforge,
+            ContentKind::Modpack,
+            "",
+            None,
+            offset,
+        )
+        .await
+        .unwrap();
+        println!("offset {offset}: {} hits / {}", page.hits.len(), page.total);
+        for hit in &page.hits {
+            match modpack::versions(&http, Source::Curseforge, &hit.project_id).await {
+                Ok(versions) => println!("  {} -> {} versions", hit.title, versions.len()),
+                Err(err) => println!("  {} -> ERROR {err}", hit.title),
+            }
+        }
+    }
+}
+
+/// Same as `modrinth_content`, from CurseForge.
+#[tokio::test]
+#[ignore = "needs CURSEFORGE_API_KEY, calls the CurseForge API"]
+async fn curseforge_content() {
+    use crate::core::content::{self, ContentKind, Target};
+
+    let http = http_client().unwrap();
+    let dir = std::env::temp_dir().join("minyhost-e2e-curseforge");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    // Waystones needs Balm, installed along with it.
+    let mods = Target {
+        kind: ContentKind::Mod,
+        mc_version: "1.21.1".into(),
+        loader: Loader::Fabric,
+    };
+    let page = content::search(
+        &http,
+        Source::Curseforge,
+        mods.kind,
+        "waystones",
+        Some(&mods),
+        0,
+    )
+    .await
+    .unwrap();
+    let waystones = page
+        .hits
+        .iter()
+        .find(|hit| hit.title == "Waystones")
+        .unwrap();
+    let outcome = content::install(
+        &http,
+        &dir,
+        Source::Curseforge,
+        &waystones.project_id,
+        &mods,
+    )
+    .await
+    .unwrap();
+    println!("{outcome:?}");
+    assert!(outcome.installed.len() >= 2, "dependencies installed too");
+
+    // A plugin (often tagged "1.21" only) and a datapack on a Paper server.
+    for (kind, query) in [
+        (ContentKind::Plugin, "worldedit"),
+        (ContentKind::Datapack, ""),
+    ] {
+        let target = Target {
+            kind,
+            mc_version: "1.21.1".into(),
+            loader: Loader::Paper,
+        };
+        let page = content::search(&http, Source::Curseforge, kind, query, Some(&target), 0)
+            .await
+            .unwrap();
+        let hit = page.hits.first().unwrap();
+        println!("installing {kind:?} {}", hit.title);
+        let outcome = content::install(&http, &dir, Source::Curseforge, &hit.project_id, &target)
+            .await
+            .unwrap();
+        println!("{outcome:?}");
+    }
+    let paper = content::list_installed(&dir, Loader::Paper).unwrap();
+    assert!(paper.iter().any(|item| item.kind == ContentKind::Plugin));
+    assert!(paper.iter().any(|item| item.kind == ContentKind::Datapack));
+
+    std::fs::remove_dir_all(&dir).unwrap();
 }
 
 #[tokio::test]

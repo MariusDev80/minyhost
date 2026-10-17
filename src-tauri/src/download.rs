@@ -35,6 +35,12 @@ pub async fn get_json<T: DeserializeOwned>(http: &reqwest::Client, url: &str) ->
     Ok(response.json().await?)
 }
 
+/// GET a URL and return its body as text.
+pub async fn get_text(http: &reqwest::Client, url: &str) -> AppResult<String> {
+    let response = http.get(url).send().await?.error_for_status()?;
+    Ok(response.text().await?)
+}
+
 /// Downloads `url` to `dest`, checking `checksum` when the API provides one.
 ///
 /// The file is written to `<dest>.part` and only renamed once complete and

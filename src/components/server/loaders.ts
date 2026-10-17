@@ -1,15 +1,24 @@
-import { Pickaxe, Puzzle, Zap, type LucideIcon } from "lucide-react";
+import {
+  Anvil,
+  Flame,
+  Pickaxe,
+  Puzzle,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { t } from "@/i18n";
-import type { Loader } from "@/types";
+import type { CreateStep, Loader } from "@/types";
 
 const icons: Record<Loader, LucideIcon> = {
   paper: Zap,
   vanilla: Pickaxe,
   fabric: Puzzle,
+  neoforge: Flame,
+  forge: Anvil,
 };
 
 /** Order in which server types are shown in the UI. */
-const order: Loader[] = ["paper", "vanilla", "fabric"];
+const order: Loader[] = ["paper", "vanilla", "fabric", "neoforge", "forge"];
 
 /** Display info for a server type. Texts are read at call time (current locale). */
 export function loaderInfo(loader: Loader): {
@@ -22,7 +31,36 @@ export function loaderInfo(loader: Loader): {
   return { value, icon: icons[value], ...t.loaders[value] };
 }
 
+/** Server types whose creation runs an installer (extra progress step). */
+export function usesInstaller(loader: Loader) {
+  return loader === "neoforge" || loader === "forge";
+}
+
 /** Every server type, in display order. */
 export function loaderList() {
   return order.map(loaderInfo);
+}
+
+/** Steps of a server created from the form. */
+export function serverSteps(loader: Loader): CreateStep[] {
+  return [
+    "preparing",
+    "downloadingJava",
+    "downloadingServer",
+    ...(usesInstaller(loader) ? (["installingLoader"] as const) : []),
+    "finalizing",
+  ];
+}
+
+/** Steps of a server created from a modpack made for `loaders`. */
+export function modpackSteps(loaders: string[]): CreateStep[] {
+  const installer = loaders.some((l) => l === "forge" || l === "neoforge");
+  return [
+    "downloadingModpack",
+    "downloadingJava",
+    "downloadingServer",
+    ...(installer ? (["installingLoader"] as const) : []),
+    "downloadingContent",
+    "finalizing",
+  ];
 }

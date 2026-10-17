@@ -1,6 +1,7 @@
 //! Business logic, independent from Tauri (usable from a CLI or tests).
 
 pub mod backup;
+pub mod content;
 pub mod create;
 pub mod eula;
 pub mod game_rules;

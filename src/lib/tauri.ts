@@ -8,6 +8,15 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type {
   ConsoleLineEvent,
+  ContentKind,
+  ContentSource,
+  ContentSources,
+  InstallOutcome,
+  InstalledContent,
+  ModpackCreated,
+  ModpackVersion,
+  NewModpackServer,
+  SearchPage,
   CreateProgress,
   GameSettings,
   Instance,
@@ -40,6 +49,8 @@ export const commands = {
     invoke<string[]>("list_versions", { loader }),
   createServer: (input: NewServer) =>
     invoke<Instance>("create_server", { input }),
+  createServerFromModpack: (input: NewModpackServer) =>
+    invoke<ModpackCreated>("create_server_from_modpack", { input }),
   deleteServer: (id: string) => invoke<void>("delete_server", { id }),
   serversFolderPath: () => invoke<string>("servers_folder_path"),
   /** Opens the folder in the file explorer. */
@@ -80,6 +91,37 @@ export const commands = {
     invoke<void>("enable_internet_access", { id }),
   disableInternetAccess: (id: string) =>
     invoke<void>("disable_internet_access", { id }),
+  contentSources: () => invoke<ContentSources>("content_sources"),
+  /** `serverId` filters for that server; `null` searches modpacks. */
+  searchContent: (params: {
+    source: ContentSource;
+    kind: ContentKind;
+    query: string;
+    serverId: string | null;
+    offset: number;
+  }) => invoke<SearchPage>("search_content", params),
+  listModpackVersions: (source: ContentSource, projectId: string) =>
+    invoke<ModpackVersion[]>("list_modpack_versions", { source, projectId }),
+  /** Project icon as a data URL. */
+  contentIcon: (url: string) => invoke<string>("content_icon", { url }),
+  listContent: (id: string) =>
+    invoke<InstalledContent[]>("list_content", { id }),
+  /** Latest compatible version, with its dependencies. Server must be stopped. */
+  installContent: (
+    id: string,
+    source: ContentSource,
+    kind: ContentKind,
+    projectId: string,
+  ) =>
+    invoke<InstallOutcome>("install_content", { id, source, kind, projectId }),
+  removeContent: (id: string, kind: ContentKind, fileName: string) =>
+    invoke<void>("remove_content", { id, kind, fileName }),
+  setContentEnabled: (
+    id: string,
+    kind: ContentKind,
+    fileName: string,
+    enabled: boolean,
+  ) => invoke<void>("set_content_enabled", { id, kind, fileName, enabled }),
 };
 
 /** Opens a web page in the user's browser. */

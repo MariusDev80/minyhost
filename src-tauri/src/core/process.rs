@@ -10,7 +10,6 @@
 //!   crash    -> process exits on its own  -> Stopped + Crashed event
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
@@ -21,12 +20,17 @@ use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::{oneshot, watch, Mutex};
 
 use crate::core::game_settings::SettingValue;
+use crate::core::providers::installer;
 use crate::core::{eula, game_rules, instances, java, properties};
 use crate::error::{AppError, AppResult};
 use crate::paths::{server_files, AppPaths};
 
 /// How long `stop` waits for a clean shutdown before killing the process.
 const STOP_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// How long a server whose startup failed may take to exit by itself
+/// (some mods keep the JVM alive after the error).
+const FAILED_START_GRACE: Duration = Duration::from_secs(15);
 
 /// Mirrored by `ServerStatus` in `src/types/index.ts`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -177,6 +181,7 @@ impl ProcessManager {
             return Err(AppError::AlreadyRunning);
         }
         check_can_start(&instance, &dir, &java)?;
+        let launch_args = installer::launch_args(&dir)?;
 
         let mut command = Command::new(&java);
         command
@@ -188,7 +193,8 @@ impl ProcessManager {
                 "-Dstdout.encoding=UTF-8",
                 "-Dstderr.encoding=UTF-8",
             ])
-            .args(["-jar", server_files::JAR, "nogui"])
+            .args(&launch_args)
+            .arg("nogui")
             .current_dir(&dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -336,6 +342,9 @@ impl ProcessManager {
             if is_ready_line(&line) {
                 self.on_ready(&id).await;
             }
+            if is_failed_start_line(&line) {
+                tokio::spawn(self.clone().on_failed_start(id.clone()));
+            }
             if let Some((key, value)) = game_rules::parse_change(&line, &mc_version) {
                 if let Some(server) = self.servers.lock().await.get_mut(&id) {
                     server.live_rules.insert(key, value);
@@ -407,6 +416,29 @@ impl ProcessManager {
         }
     }
 
+    /// Startup failed: if the process does not exit by itself, kill it, so
+    /// the server shows as crashed instead of starting forever.
+    async fn on_failed_start(self, id: String) {
+        let mut exited = {
+            let servers = self.servers.lock().await;
+            match servers.get(&id) {
+                Some(server) if server.status == ServerStatus::Starting => server.exited.clone(),
+                _ => return,
+            }
+        };
+        if tokio::time::timeout(FAILED_START_GRACE, exited.wait_for(|done| *done))
+            .await
+            .is_ok()
+        {
+            return;
+        }
+        if let Some(server) = self.servers.lock().await.get_mut(&id) {
+            if let Some(kill) = server.kill.take() {
+                let _ = kill.send(());
+            }
+        }
+    }
+
     fn emit_status(&self, id: &str, status: ServerStatus) {
         (self.sink)(ServerEvent::Status {
             id: id.to_string(),
@@ -431,10 +463,8 @@ fn check_can_start(
     if !eula::is_accepted(dir) {
         return Err(AppError::EulaNotAccepted);
     }
-    for file in [dir.join(server_files::JAR), PathBuf::from(java)] {
-        if !file.exists() {
-            return Err(AppError::MissingFiles(file.display().to_string()));
-        }
+    if !java.exists() {
+        return Err(AppError::MissingFiles(java.display().to_string()));
     }
     if !(instances::MIN_MEMORY_MB..=instances::MAX_MEMORY_MB).contains(&instance.memory_mb) {
         return Err(AppError::InvalidInput(format!(
@@ -459,6 +489,11 @@ fn is_ready_line(line: &str) -> bool {
     line.contains("Done (") && line.contains("For help, type")
 }
 
+/// Printed by Minecraft when startup failed (a mod error, usually).
+fn is_failed_start_line(line: &str) -> bool {
+    line.contains("Failed to start the minecraft server")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -470,6 +505,9 @@ mod tests {
         ));
         assert!(!is_ready_line(
             "[12:00:00] [Server thread/INFO]: Preparing spawn area: 40%"
+        ));
+        assert!(is_failed_start_line(
+            "[16:57:21] [main/ERROR]: Failed to start the minecraft server"
         ));
     }
 }

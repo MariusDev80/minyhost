@@ -40,6 +40,11 @@ impl AppPaths {
         self.root.join("java").join(version.to_string())
     }
 
+    /// `downloads/` — modpack archives while a server is being created.
+    pub fn downloads_dir(&self) -> PathBuf {
+        self.root.join("downloads")
+    }
+
     /// `servers/` — one folder per server instance.
     pub fn servers_dir(&self) -> PathBuf {
         self.root.join("servers")
@@ -57,4 +62,6 @@ pub mod server_files {
     pub const JAR: &str = "server.jar";
     pub const EULA: &str = "eula.txt";
     pub const PROPERTIES: &str = "server.properties";
+    /// Origin of the mods, plugins and datapacks installed by MinyHost.
+    pub const CONTENT: &str = "content.json";
 }
